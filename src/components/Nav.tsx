@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface UserSession {
     name: string;
@@ -10,8 +10,25 @@ export default function Nav() {
     const [user, setUser] = useState<UserSession | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
+    useEffect(() => {
+        // Check session on mount
+        fetch('/api/auth/session')
+            .then(res => {
+                if (res.ok) {
+                    return res.json();
+                }
+                return null;
+            })
+            .then(data => {
+                if (data && data.user) {
+                    setUser(data.user);
+                }
+            })
+            .catch(() => { });
+    }, []);
+
     return (
-        <nav className="absolute w-full top-0 z-50 bg-gray-900/5 backdrop-blur-md border-b border-gray-800">
+        <nav className="sticky top-0 w-full z-50 bg-gray-900/40 backdrop-blur-md border-b border-gray-800">
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-row justify-between items-center w-full h-auto py-3">
                     {/* Logo / Title */}
