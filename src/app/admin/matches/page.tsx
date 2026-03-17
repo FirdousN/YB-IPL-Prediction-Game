@@ -101,7 +101,7 @@ export default function AdminMatchesPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
+    <div className="p-8 max-w-6xl mx-auto bg-gray-50 dark:bg-[#001f3f] min-h-screen text-gray-800 dark:text-gray-200 rounded-xl">
       <h1 className="text-3xl font-bold mb-8 text-blue-600">Manage Matches</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
