@@ -63,7 +63,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Update session expiration if valid (only if we haven't redirected)
-    const updatedRes = await updateSession(request, session);
+    const updatedRes = await updateSession(request, session || undefined);
     return updatedRes || NextResponse.next();
 }
 

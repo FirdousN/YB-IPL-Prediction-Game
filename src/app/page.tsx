@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Nav from "../components/Nav";
+import Nav from "../components/layout/Nav/Nav";
 
 interface UserSession {
   name: string;
@@ -12,8 +11,6 @@ interface UserSession {
 
 export default function Home() {
   const [user, setUser] = useState<UserSession | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     // Check session on mount
@@ -32,14 +29,6 @@ export default function Home() {
       .catch(() => { });
   }, []);
 
-  const handleLogout = async () => {
-    // Implement logout logic if needed, or just clear cookie on client?
-    // For now, let's assume we might need an API or just redirect to login which clears?
-    // This app seems to lack a clear logout API. Let's just client-redirect for now or clear state.
-    // Usually strictly needs a server logout route to clear httpOnly cookie.
-    // Assuming user just wants UI for now.
-    // Let's create a logout route later if needed, for now just UI.
-  };
 
   return (
     <>
@@ -66,7 +55,7 @@ export default function Home() {
               href="/site/matches"
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl text-xl font-bold transition-all transform hover:scale-105 shadow-lg shadow-blue-500/25"
             >
-              {user ? "Start Predicting" : "Start Predicting"}
+              {user ? "Go to Dashboard" : "Start Predicting"}
             </Link>
             {/* Removed redundant Login button from center as requested */}
           </div>
