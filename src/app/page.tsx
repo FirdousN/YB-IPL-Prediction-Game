@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import Nav from "../components/Nav";
+import Nav from "../components/layout/Nav/Nav";
 
 interface UserSession {
   name: string;
