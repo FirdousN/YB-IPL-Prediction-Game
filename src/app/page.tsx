@@ -32,13 +32,10 @@ export default function Home() {
 
   return (
     <>
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-900 to-black text-white p-4 relative">
-
-        {/* Navigation */}
-        <Nav />
+      {/* Navigation */}
+      <Nav />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-900 to-black text-white py-12 px-4 relative">
         {/* Top Right Header */}
-
-
         <main className="flex flex-col items-center text-center max-w-4xl space-y-8">
           {/* Main Header */}
           <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">
