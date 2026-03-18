@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/db';
 import Prediction from '@/src/models/Prediction';
 import Match from '@/src/models/Match';
-import { verifySession } from '@/src/lib/auth';
+import { getSession } from '@/src/lib/session';
 import { z } from 'zod';
 
 const predictionSchema = z.object({
@@ -13,11 +13,7 @@ const predictionSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const cookie = request.cookies.get('session')?.value;
-    if (!cookie) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const session = await verifySession(cookie) as { role?: string; participantId?: string; userId?: string; name?: string } | null;
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -39,11 +35,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Predictions related to this match are now closed.' }, { status: 403 });
     }
 
-    // Upsert prediction (User can change prediction before lock time?)
-    // Requirement says "strict prediction locking". Usually implies once locked, no change.
-    // Does it imply once submitted no change? "15 mins before start" is the lock condition.
-    // So user should be able to update their prediction until the lock time.
-
     const prediction = await Prediction.findOneAndUpdate(
       { userId: session.userId, matchId },
       { selectedOption, predictedAt: new Date() },
@@ -53,7 +44,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(prediction);
 
   } catch (error: unknown) {
-    // Check for duplicate key error just in case, though upsert handles it.
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) }, { status: 400 });
   }
 }
@@ -61,11 +51,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    const cookie = request.cookies.get('session')?.value;
-    if (!cookie) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const session = await verifySession(cookie) as { role?: string; participantId?: string; userId?: string; name?: string } | null;
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

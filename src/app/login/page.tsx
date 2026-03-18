@@ -17,8 +17,17 @@ export default function LoginPage() {
     fetch('/api/auth/session')
       .then(res => {
         if (res.ok) {
-          // Already logged in
-          router.replace('/site/matches');
+          return res.json();
+        }
+        return null;
+      })
+      .then(data => {
+        if (data && data.authenticated) {
+          if (data.user.role === 'admin') {
+            router.replace('/admin/dashboard');
+          } else {
+            router.replace('/dashboard');
+          }
         }
       })
       .catch(() => { }); // Ignore errors
@@ -30,68 +39,23 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // ---------------------------------------------------------
-      // CASE 1: Registration Attempt (User is on Step 0 or has entered Name)
-      // ---------------------------------------------------------
-      if (step === 0 || name) {
-        const registerRes = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, phone }),
-        });
-
-        if (registerRes.ok) {
-          setStep(2); // Success -> OTP
-        } else if (registerRes.status === 409) {
-          // User already exists (409) -> Switch to Login Flow automatically
-          // "if user registered once , never ask it"
-
-          // Retry as Login
-          const loginRes = await fetch("/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone }),
-          });
-
-          if (loginRes.ok) {
-            setStep(2); // Success -> OTP
-            setError(""); // Clear any previous error
-            // Maybe show a toast: "Account exists. Logging you in..."
-          } else {
-            const loginData = await loginRes.json();
-            setError(loginData.error || "Login failed");
-          }
-        } else {
-          const regData = await registerRes.json();
-          setError(regData.error || "Registration failed");
-        }
-        return;
-      }
-
-      // ---------------------------------------------------------
-      // CASE 2: Login Attempt (Default Step 1)
-      // ---------------------------------------------------------
-      const loginRes = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, name: name || undefined }),
       });
 
-      if (loginRes.ok) {
+      const data = await res.json();
+
+      if (res.ok) {
         setStep(2); // Move to OTP
-        return;
-      }
-
-      const loginData = await loginRes.json();
-
-      if (loginRes.status === 404) {
-        // User not found -> Switch to Registration
-        setError("Account not found. Please enter your name to register.");
-        setStep(0); // Switch to registration (shows Name input)
       } else {
-        setError(loginData.error || "Login failed");
+        setError(data.error || "Failed to send OTP");
+        if (res.status === 404 && step !== 0) {
+           // User not found -> Switch to Registration
+           setStep(0);
+        }
       }
-
     } catch (err: unknown) {
       setError((err instanceof Error ? err.message : String(err)));
     } finally {
@@ -110,7 +74,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/verify", {
+      const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, otp, name: name || undefined }),
@@ -119,10 +83,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.user.role === 'ADMIN') {
-          router.push("/admin");
+        // Use redirectTo from response or default
+        if (data.redirectTo) {
+          router.push(data.redirectTo);
+        } else if (data.user.role === 'admin') {
+          router.push("/admin/dashboard");
         } else {
-          router.push("/site/matches");
+          router.push("/dashboard");
         }
       } else {
         setError(data.error || "Verification failed");
@@ -163,7 +130,7 @@ export default function LoginPage() {
           {/* Fallback to text if image fails or while waiting for file */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo.png"
+            src="/logo-1.png"
             alt="Yes Bharath"
             className="w-48 h-auto object-contain"
             onError={(e) => {
