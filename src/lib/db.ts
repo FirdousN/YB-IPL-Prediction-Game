@@ -1,5 +1,3 @@
-import mongoose from 'mongoose';
-
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
@@ -15,7 +13,8 @@ async function dbConnect() {
     );
   }
 
-  // Use a different global key to avoid conflicts if needed, but 'mongoose' is standard
+  const { default: mongoose } = await import('mongoose');
+
   let cached = (global as any).mongoose;
 
   if (!cached) {
