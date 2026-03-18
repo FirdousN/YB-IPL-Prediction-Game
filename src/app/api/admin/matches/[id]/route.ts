@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/db';
 import Match from '@/src/models/Match';
 import { z } from 'zod';
-import { verifySession } from '@/src/lib/auth';
+import { getSession } from '@/src/lib/session';
 
 const updateMatchSchema = z.object({
   teamA: z.string().optional(),
@@ -14,10 +14,8 @@ const updateMatchSchema = z.object({
 });
 
 async function isAdmin(request: NextRequest) {
-  const cookie = request.cookies.get('session')?.value;
-  if (!cookie) return false;
-  const session = await verifySession(cookie) as { role?: string } | null;
-  return session && session.role === 'ADMIN';
+  const session = await getSession();
+  return session && session.role === 'admin';
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

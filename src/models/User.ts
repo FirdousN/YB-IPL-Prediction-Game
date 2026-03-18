@@ -4,14 +4,14 @@ export interface IUser {
   _id: mongoose.Types.ObjectId;
   name: string;
   phone: string;
-  role: 'USER' | 'ADMIN';
+  role: 'user' | 'admin';
   createdAt: Date;
 }
 
 const UserSchema = new Schema<IUser>({
   name: { type: String, required: true },
   phone: { type: String, required: true, unique: true },
-  role: { type: String, enum: ['USER', 'ADMIN'], default: 'USER' },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
   createdAt: { type: Date, default: Date.now },
 });
 

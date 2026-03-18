@@ -1,109 +1,71 @@
+import { NextRequest, NextResponse } from "next/server";
+import { signToken, JWTPayload } from "../../../../lib/jwt";
+import { setSessionCookie } from "../../../../lib/session";
+import { z } from 'zod';
 
-import { NextResponse } from "next/server";
-import dbConnect from "@/src/lib/db";
-import Participant from "@/src/models/Participant";
-import { verifyJioOtp } from "@/src/lib/sendoxi-otp";
-import { createSession } from "@/src/lib/session";
-import { checkOtpVerifyBlock, incrementOtpVerifyFailure } from "@/src/lib/ratelimit";
+const verifySchema = z.object({
+    phone: z.string().min(10),
+    otp: z.string().length(6),
+    name: z.string().optional(),
+});
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
-        const { phone, otp, name } = await req.json();
-
-        // 1. Validate Input
-        if (!phone || !otp) {
-            return NextResponse.json({ error: "Missing required fields (Phone/OTP)" }, { status: 400 });
-        }
-
-        // 2. Brute Force Protection (Check Block Status)
-        // Key: `otp_verify:{phone}`
-        const limit = await checkOtpVerifyBlock(`otp_verify:${phone}`);
-        if (!limit.success) {
-            return NextResponse.json({ 
-                error: limit.msg || "Too many failed attempts. Account blocked for 15 minutes." 
-            }, { status: 429 });
-        }
-
-        // 3. Verify OTP via JIO Service
-        const jioResult = await verifyJioOtp(phone, otp);
-        if (!jioResult.success) {
-             // Increment Failure Count
-             await incrementOtpVerifyFailure(`otp_verify:${phone}`);
-             return NextResponse.json({ error: jioResult.message || "Invalid OTP" }, { status: 400 });
-        }
-
+        const { default: dbConnect } = await import("../../../../lib/db");
+        const { default: User } = await import("../../../../models/User");
+        const { verifyOTP } = await import("../../../../lib/sendoxi");
+        
         await dbConnect();
+        const body = await req.json();
+        const { phone, otp, name: providedName } = verifySchema.parse(body);
 
-        // Retrieve Trusted Name from OTP Validation Result (stored in MongoDB Otp doc)
-        // This is the name the user entered when they requested the OTP.
-        const trustedName = jioResult.name;
+        // 1. Verify OTP
+        const verifyResult = await verifyOTP(phone, otp);
+        if (!verifyResult.success) {
+            return NextResponse.json({ error: verifyResult.message || "Invalid OTP" }, { status: 400 });
+        }
 
-        // 3. Find or Create User
-        let user = await Participant.findOne({ phone });
+        // 2. Find or Create User
+        let user = await User.findOne({ phone });
 
         if (!user) {
-            const finalName = name || trustedName;
-
-            if (!finalName) {
-                return NextResponse.json({ error: "Name required for new user" }, { status: 400 });
-            }
-            
-            // Create New User (No Fingerprint)
-            user = await Participant.create({
+            // Check if this is a signup attempt (name provided or stored in OTP)
+            const finalName = providedName || verifyResult.name || "Guest";
+            user = await User.create({
                 name: finalName,
                 phone,
-                phoneVerified: true, // Phone verified via OTP
-                authProvider: 'phone',
-                hasSpun: false,
-                termsAgreed: false,
-                // Removed Security Fields
-                ipAddress: req.headers.get("x-forwarded-for") || "unknown",
-                loginHistory: [{
-                    ip: req.headers.get("x-forwarded-for") || "unknown",
-                    timestamp: new Date()
-                }]
+                role: 'user', // Default to user
             });
-        } else {
-             // Existing User: VALIDATE DEVICE - REMOVED PER REQUEST
-             // "ClentFingerprint remove DeviceFingerprint compleatly from code"
-
-             // UPDATE NAME: If provided in request, update the DB record
-             if (name && name.trim().length > 0) {
-                 user.name = name;
-             }
-             
-             // Mark as verified since they passed OTP
-             user.phoneVerified = true;
-             
-             // Update History
-             user.loginHistory.push({
-                 ip: req.headers.get("x-forwarded-for") || "unknown",
-                 timestamp: new Date()
-             });
-             user.ipAddress = req.headers.get("x-forwarded-for") || "unknown"; // Update last IP
-             await user.save();
         }
 
-        // 4. Create Session (HttpOnly Cookie)
-        await createSession({
-            participantId: user._id.toString(),
-            version: 1, // session version
-            role: 'user'
-        });
+        // 3. Create Session
+        const payload: JWTPayload = {
+            userId: user._id.toString(),
+            role: user.role,
+            name: user.name,
+        };
 
-        // 5. Return User Data (Sanitized)
-        return NextResponse.json({
+        const token = await signToken(payload);
+
+        // 4. Create Response and Set Cookie
+        const response = NextResponse.json({
             success: true,
             user: {
-                participantId: user._id, 
+                id: user._id,
                 name: user.name,
-                phone: user.phone, // Safe to return to owner
-                hasSpun: user.hasSpun
-            }
+                role: user.role,
+            },
+            redirectTo: user.role === 'admin' ? '/admin/dashboard' : '/dashboard'
         });
 
-    } catch (error) {
+        // Set Cookie using our utility
+        // Note: setSessionCookie uses cookies() from next/headers, which works in Route Handlers
+        await setSessionCookie(token);
+
+        return response;
+
+    } catch (error: any) {
         console.error("Verify OTP Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
     }
 }

@@ -1,4 +1,4 @@
-import { getSession } from "@/src/lib/auth";
+import { getSession } from "@/src/lib/session";
 import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/db';
 import Match from '@/src/models/Match';
+import { getSession } from '@/src/lib/session';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +31,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-import { getSession } from '@/src/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
