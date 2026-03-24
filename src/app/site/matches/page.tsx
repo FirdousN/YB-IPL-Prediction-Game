@@ -3,15 +3,20 @@
 import { useEffect, useState } from "react";
 import MatchCard from "@/src/components/MatchCard";
 
+interface Team {
+  _id: string;
+  name: string;
+  shortName: string;
+  logoUrl?: string;
+}
+
 interface Match {
   _id: string;
-  teamA: string;
-  teamB: string;
+  teamA: Team;
+  teamB: Team;
   startTime: string;
   status: string;
   isLocked: boolean;
-  // Mocked fields
-  matchNumber?: string;
   group?: string;
   venue?: string;
 }
@@ -19,7 +24,7 @@ interface Match {
 interface Prediction {
   _id: string;
   matchId: Match;
-  selectedOption: string;
+  answers: any[];
 }
 
 export default function MatchesPage() {

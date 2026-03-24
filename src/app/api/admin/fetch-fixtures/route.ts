@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`https://api.cricketdata.org/v1/matches?apikey=${apiKey}&offset=0`);
+    const res = await fetch(`https://api.cricapi.com/v1/matches?apikey=${apiKey}&offset=0`);
     if (!res.ok) {
        throw new Error('Failed to fetch from external API');
     }

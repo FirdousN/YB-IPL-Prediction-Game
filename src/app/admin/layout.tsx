@@ -10,7 +10,8 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  Shield
 } from "lucide-react";
 import { useState } from "react";
 
@@ -30,6 +31,7 @@ export default function AdminLayout({
 
   const menuItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Teams", href: "/admin/teams", icon: Shield },
     { name: "Matches", href: "/admin/matches", icon: Calendar },
     { name: "Results", href: "/admin/results", icon: Trophy },
     { name: "Users", href: "/admin/users", icon: Users },

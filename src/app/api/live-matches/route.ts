@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`https://api.cricketdata.org/v1/cricScore?apikey=${apiKey}`);
+    const res = await fetch(`https://api.cricapi.com/v1/cricScore?apikey=${apiKey}`);
     if (!res.ok) {
        throw new Error('Failed to fetch live scores');
     }
