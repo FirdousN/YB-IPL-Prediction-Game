@@ -3,12 +3,13 @@ import dbConnect from '@/src/lib/db';
 import Match from '@/src/models/Match';
 import Team from '@/src/models/Team';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await dbConnect();
     if (!Team) console.log('Team model ensuring load...');
 
-    const match = await Match.findById(params.id)
+    const match = await Match.findById(id)
       .populate('teamA')
       .populate('teamB');
 

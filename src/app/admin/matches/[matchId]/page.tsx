@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { ArrowLeft, Users, Calendar, MapPin, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -34,7 +34,8 @@ interface Prediction {
   predictedAt: string;
 }
 
-export default function AdminMatchPredictionsPage({ params }: { params: { matchId: string } }) {
+export default function AdminMatchPredictionsPage({ params }: { params: Promise<{ matchId: string }> }) {
+  const resolvedParams = use(params);
   const [match, setMatch] = useState<Match | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +46,8 @@ export default function AdminMatchPredictionsPage({ params }: { params: { matchI
     async function fetchData() {
       try {
         const [matchRes, predRes] = await Promise.all([
-          fetch(`/api/matches/${params.matchId}`),
-          fetch(`/api/admin/matches/${params.matchId}/predictions`)
+          fetch(`/api/matches/${resolvedParams.matchId}`),
+          fetch(`/api/admin/matches/${resolvedParams.matchId}/predictions`)
         ]);
 
         if (!matchRes.ok) throw new Error("Failed to load match details");
@@ -64,7 +65,7 @@ export default function AdminMatchPredictionsPage({ params }: { params: { matchI
       }
     }
     fetchData();
-  }, [params.matchId]);
+  }, [resolvedParams.matchId]);
 
   if (loading) return <div className="p-8 text-slate-500 font-bold text-center">Loading Prediction Roster...</div>;
   if (error || !match) return <div className="p-8 text-red-500 font-bold text-center">{error || "Match not found"}</div>;

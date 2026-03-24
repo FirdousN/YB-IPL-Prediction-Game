@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 
 interface Team {
@@ -30,7 +30,8 @@ interface Match {
   questions: Question[];
 }
 
-export default function MatchDetailsPage({ params }: { params: { matchId: string } }) {
+export default function MatchDetailsPage({ params }: { params: Promise<{ matchId: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,13 +44,13 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
   useEffect(() => {
     async function fetchMatch() {
       try {
-        const res = await fetch(`/api/matches/${params.matchId}`);
+        const res = await fetch(`/api/matches/${resolvedParams.matchId}`);
         if (!res.ok) throw new Error("Match not found or failed to load");
         const data = await res.json();
         setMatch(data);
 
         // Fetch prior predictions
-        const predRes = await fetch(`/api/predictions/${params.matchId}`);
+        const predRes = await fetch(`/api/predictions/${resolvedParams.matchId}`);
         let existingAnswers: any[] = [];
         if (predRes.ok) {
           const predData = await predRes.json();
@@ -74,7 +75,7 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
       }
     }
     fetchMatch();
-  }, [params.matchId]);
+  }, [resolvedParams.matchId]);
 
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers(prev => prev.map(a => a.questionId === questionId ? { ...a, value } : a));
@@ -96,7 +97,7 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: params.matchId, answers })
+        body: JSON.stringify({ matchId: resolvedParams.matchId, answers })
       });
 
       if (!res.ok) {
