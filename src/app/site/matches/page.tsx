@@ -23,9 +23,10 @@ interface Prediction {
 }
 
 export default function MatchesPage() {
-  const [activeTab, setActiveTab] = useState<"TODAY" | "TOMORROW" | "MY_PICKS">("TODAY");
+  const [activeTab, setActiveTab] = useState<"TODAY" | "TOMORROW" | "MY_PICKS" | "LIVE">("TODAY");
   const [matches, setMatches] = useState<Match[]>([]);
   const [myPicks, setMyPicks] = useState<Prediction[]>([]);
+  const [liveMatches, setLiveMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -39,16 +40,23 @@ export default function MatchesPage() {
         const dataMatches = await resMatches.json();
         setMatches(dataMatches);
 
-        // Fetch My Picks (fail silently or user might not be logged in)
+        // Fetch My Picks
         try {
           const resPicks = await fetch("/api/predictions");
           if (resPicks.ok) {
             const dataPicks = await resPicks.json();
             setMyPicks(dataPicks);
           }
-        } catch (e) {
-          console.warn("Could not fetch picks", e);
-        }
+        } catch (e) {}
+
+        // Fetch Live Scores
+        try {
+          const resLive = await fetch("/api/live-matches");
+          if (resLive.ok) {
+            const dataLive = await resLive.json();
+            if (dataLive.data) setLiveMatches(dataLive.data);
+          }
+        } catch (e) {}
 
       } catch (err: unknown) {
         setError((err instanceof Error ? err.message : String(err)));
@@ -79,15 +87,8 @@ export default function MatchesPage() {
         return d >= startOfTomorrow && d < endOfTomorrow;
       });
     }
-    // Logic for returning matches for My Picks if needed, but the UI usually shows the prediction card
-    // For now, let's just return matches from myPicks?
-    // Wait, MatchCard expects a Match object.
     if (activeTab === "MY_PICKS") {
-      return myPicks.map(p => ({
-        ...p.matchId,
-        // You might want to show what they picked? MatchCard doesn't support it yet.
-        // Let's just list the matches they predicted on.
-      }));
+      return myPicks.map(p => ({ ...p.matchId }));
     }
     return [];
   };
@@ -105,38 +106,80 @@ export default function MatchesPage() {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex justify-center space-x-1 bg-gray-800/50 p-1 rounded-xl max-w-md mx-auto backdrop-blur-sm border border-white/5">
-        {(["TODAY", "TOMORROW", "MY_PICKS"] as const).map((tab) => (
+      <div className="flex justify-center space-x-1 bg-gray-800/50 p-1 rounded-xl max-w-lg mx-auto backdrop-blur-sm border border-white/5 overflow-x-auto">
+        {(["TODAY", "TOMORROW", "MY_PICKS", "LIVE"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`
-              flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200
+              flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all duration-200 uppercase tracking-widest min-w-max
               ${activeTab === tab
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30"
                 : "text-gray-400 hover:text-white hover:bg-white/5"}
             `}
           >
-            {tab === "MY_PICKS" ? "My Picks" : tab.charAt(0) + tab.slice(1).toLowerCase()}
+            {tab.replace("_", " ")}
+            {tab === "LIVE" && <span className="ml-2 w-2 h-2 rounded-full bg-red-500 inline-block animate-pulse"></span>}
           </button>
         ))}
       </div>
 
       {/* Match Grid */}
-      {displayMatches.length === 0 ? (
-        <div className="text-center py-12 bg-gray-800/30 rounded-2xl border border-dashed border-gray-700">
-          <p className="text-gray-400 text-lg">
-            {activeTab === "MY_PICKS"
-              ? "You haven't made any predictions yet."
-              : "No matches scheduled for this day."}
-          </p>
+      {activeTab === "LIVE" ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {liveMatches.length === 0 ? (
+             <div className="md:col-span-2 lg:col-span-3 text-center py-12 bg-gray-800/30 rounded-2xl border border-dashed border-gray-700">
+               <p className="text-gray-400 text-lg">No live scoring data available at the moment.</p>
+             </div>
+          ) : (
+            liveMatches.map((liveMatch, index) => (
+              <div key={liveMatch.id || index} className="p-6 bg-gradient-to-b from-[#1a233a] to-[#0a1122] border border-blue-800/40 rounded-2xl shadow-xl hover:border-blue-500/50 transition-all group overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
+                <div className="flex justify-between items-center mb-6">
+                   <div className="flex items-center space-x-2">
+                     <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                     <span className="text-xs font-black tracking-widest text-red-500">LIVE RESULT</span>
+                   </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-bold text-white">{liveMatch.t1 || "Team 1"}</span>
+                    <span className="text-lg font-bold text-gray-300">{liveMatch.t1s || "-"}</span>
+                  </div>
+                  <div className="w-full h-px bg-gray-700/50"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-bold text-white">{liveMatch.t2 || "Team 2"}</span>
+                    <span className="text-lg font-bold text-gray-300">{liveMatch.t2s || "-"}</span>
+                  </div>
+                </div>
+                
+                <div className="mt-8 p-3 rounded-xl bg-blue-900/20 border border-blue-800/30">
+                  <p className="text-center text-sm font-semibold text-blue-300">
+                    {liveMatch.status || "Match Details Loading..."}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {displayMatches.map((match) => (
-            <MatchCard key={match._id} match={match} />
-          ))}
-        </div>
+        <>
+          {displayMatches.length === 0 ? (
+            <div className="text-center py-12 bg-gray-800/30 rounded-2xl border border-dashed border-gray-700">
+              <p className="text-gray-400 text-lg">
+                {activeTab === "MY_PICKS"
+                  ? "You haven't made any predictions yet."
+                  : "No matches scheduled for this day."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {displayMatches.map((match) => (
+                <MatchCard key={match._id} match={match} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

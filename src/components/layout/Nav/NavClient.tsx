@@ -73,6 +73,14 @@ export default function NavClient() {
                         />
                     </Link>
 
+                    {/* Center Navigation Links */}
+                    <div className="hidden lg:flex items-center space-x-8 text-sm font-black tracking-widest text-gray-300 uppercase">
+                        <Link href="/site/matches" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Matches & Results</Link>
+                        <Link href="/site/points-table" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Points Table</Link>
+                        <Link href="/site/stats" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Overall Stats</Link>
+                        <Link href="/site/teams" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">All Teams</Link>
+                    </div>
+
                     {/* Right Side */}
                     <div className="flex items-center space-x-6">
 
@@ -137,10 +145,10 @@ export default function NavClient() {
                                         </Link>
 
                                         <Link
-                                            href="/site/results"
+                                            href="/site/matches"
                                             className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition"
                                         >
-                                            Results
+                                            Matches
                                         </Link>
 
                                         {/* Logout */}
