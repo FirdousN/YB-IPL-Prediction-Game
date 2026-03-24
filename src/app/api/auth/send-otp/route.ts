@@ -3,7 +3,6 @@ import { sendOTP } from '../../../../lib/sendoxi';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 const sendOtpSchema = z.object({
   phone: z.string().min(10),
@@ -12,7 +11,6 @@ const sendOtpSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { sendOTP } = await import('../../../../lib/sendoxi');
     const body = await request.json();
     const { phone, name } = sendOtpSchema.parse(body);
 
