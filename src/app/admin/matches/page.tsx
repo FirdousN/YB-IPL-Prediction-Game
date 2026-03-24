@@ -1,79 +1,243 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Plus, Settings2, Trash2, List, Filter, ArrowLeft, DownloadCloud, X } from "lucide-react";
+import Link from "next/link";
+
+interface Team {
+  _id: string;
+  name: string;
+  shortName: string;
+  logoUrl?: string;
+}
 
 interface Match {
   _id: string;
-  teamA: string;
-  teamB: string;
+  teamA: Team;
+  teamB: Team;
   startTime: string;
   status: string;
   venue?: string;
   group?: string;
+  questions?: any[];
 }
+
+interface QuestionForm {
+  id: string;
+  text: string;
+  type: "OPTIONS" | "TEXT";
+  options: string[];
+}
+
+interface ApiFixture {
+  id: string;
+  name: string;
+  matchType: string;
+  status: string;
+  venue: string;
+  date: string;
+  dateTimeGMT: string;
+  teams: string[];
+  teamInfo?: { name: string; shortname: string }[];
+}
+
+const DEFAULT_QUESTIONS: QuestionForm[] = [
+  { id: "q1", text: "Who will win the match?", type: "OPTIONS", options: [] },
+  { id: "q2", text: "Who will score the most runs in this match?", type: "TEXT", options: [] },
+  { id: "q3", text: "Who will take the most wickets in this match?", type: "TEXT", options: [] },
+  { id: "q4", text: "Total runs scored by the winning team?", type: "TEXT", options: [] },
+  { id: "q5", text: "Player / Man of the Match?", type: "TEXT", options: [] }
+];
 
 export default function AdminMatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"ALL" | "UPCOMING" | "LIVE" | "COMPLETED">("ALL");
+  
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showFixturesModal, setShowFixturesModal] = useState(false);
+  const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
+  const [loadingFixtures, setLoadingFixtures] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     teamA: "",
     teamB: "",
     startTime: "",
     endTime: "",
     venue: "",
-    group: "",
-    question: "Who will win?",
-    options: ["", ""] // Initialize with 2 options
+    group: ""
   });
+
+  const [questions, setQuestions] = useState<QuestionForm[]>([...DEFAULT_QUESTIONS]);
 
   useEffect(() => {
     fetchMatches();
+    fetchTeams();
   }, []);
 
   const fetchMatches = async () => {
     try {
-      const res = await fetch("/api/matches");
+      setLoading(true);
+      const res = await fetch("/api/admin/matches");
       if (res.ok) {
         const data = await res.json();
         setMatches(data);
-      } else {
-        setError("Failed to fetch matches");
       }
     } catch {
-      setError("Error fetching matches");
+      console.error("Failed to load matches");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch("/api/admin/teams");
+      if (res.ok) setTeams(await res.json());
+    } catch {
+      console.error("Failed to load teams");
+    }
+  };
+
+  const loadFixtures = async () => {
+    setLoadingFixtures(true);
+    setShowFixturesModal(true);
+    try {
+      const res = await fetch("/api/admin/fetch-fixtures");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data && Array.isArray(data.data)) {
+           setFixtures(data.data.filter((f: any) => f.matchType !== 'test')); // Filter out Test matches for cleaner lists initially if preferred, but we show all for now
+        }
+      } else {
+        const errData = await res.json();
+        alert(errData.error || "Failed to fetch actual fixtures.");
+      }
+    } catch (err: any) {
+      alert("Error contacting fixture API");
+    } finally {
+      setLoadingFixtures(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...formData.options];
-    newOptions[index] = value;
-    setFormData({ ...formData, options: newOptions });
+  const handleTeamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    updateQ1(name === "teamA" ? value : formData.teamA, name === "teamB" ? value : formData.teamB);
+  };
+
+  const updateQ1 = (effectiveTeamAId: string, effectiveTeamBId: string) => {
+    setTimeout(() => {
+      setQuestions(prevQ => {
+         const newQ = [...prevQ];
+         const q1Index = newQ.findIndex(q => q.id === "q1");
+         if (q1Index !== -1 && newQ[q1Index].type === "OPTIONS") {
+            const teamAObj = teams.find(t => t._id === effectiveTeamAId);
+            const teamBObj = teams.find(t => t._id === effectiveTeamBId);
+            newQ[q1Index].options = [teamAObj?.name || "", teamBObj?.name || ""].filter(Boolean);
+         }
+         return newQ;
+      });
+    }, 0);
+  };
+
+  const handleQuestionChange = (id: string, field: keyof QuestionForm, value: any) => {
+    setQuestions(questions.map(q => q.id === id ? { ...q, [field]: value } : q));
+  };
+
+  const handleRemoveQuestion = (id: string) => {
+    setQuestions(questions.filter(q => q.id !== id));
+  };
+
+  const handleAddQuestion = () => {
+    const newId = `custom_${Date.now()}`;
+    setQuestions([...questions, { id: newId, text: "New Custom Question?", type: "TEXT", options: [] }]);
+  };
+
+  const applyFixture = (fixture: ApiFixture) => {
+     try {
+       // Format dates for datetime-local (YYYY-MM-DDTHH:mm)
+       const start = new Date(fixture.dateTimeGMT || fixture.date);
+       const startLocal = new Date(start.getTime() - start.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+       
+       // Default end time to 4 hours later
+       const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+       const endLocal = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+       let matchedTeamAId = "";
+       let matchedTeamBId = "";
+
+       // Attempt auto-matching Team IDs from the DB using names or shortnames
+       if (fixture.teamInfo && fixture.teamInfo.length >= 2) {
+          const apiTeamAInfo = fixture.teamInfo[0];
+          const apiTeamBInfo = fixture.teamInfo[1];
+          
+          const dbTeamA = teams.find(t => 
+             t.name.toLowerCase() === apiTeamAInfo.name.toLowerCase() || 
+             t.shortName.toLowerCase() === apiTeamAInfo.shortname.toLowerCase()
+          );
+          if (dbTeamA) matchedTeamAId = dbTeamA._id;
+
+          const dbTeamB = teams.find(t => 
+             t.name.toLowerCase() === apiTeamBInfo.name.toLowerCase() || 
+             t.shortName.toLowerCase() === apiTeamBInfo.shortname.toLowerCase()
+          );
+          if (dbTeamB) matchedTeamBId = dbTeamB._id;
+       } else if (fixture.teams && fixture.teams.length >= 2) {
+          const apiTeamA = fixture.teams[0];
+          const apiTeamB = fixture.teams[1];
+          
+          const dbTeamA = teams.find(t => t.name.toLowerCase().includes(apiTeamA.toLowerCase()) || apiTeamA.toLowerCase().includes(t.name.toLowerCase()));
+          if (dbTeamA) matchedTeamAId = dbTeamA._id;
+
+          const dbTeamB = teams.find(t => t.name.toLowerCase().includes(apiTeamB.toLowerCase()) || apiTeamB.toLowerCase().includes(t.name.toLowerCase()));
+          if (dbTeamB) matchedTeamBId = dbTeamB._id;
+       }
+
+       setFormData({
+         teamA: matchedTeamAId,
+         teamB: matchedTeamBId,
+         startTime: startLocal,
+         endTime: endLocal,
+         venue: fixture.venue || "",
+         group: fixture.matchType ? fixture.matchType.toUpperCase() + " SET" : "Cricket Series"
+       });
+
+       updateQ1(matchedTeamAId, matchedTeamBId);
+       setShowFixturesModal(false);
+     } catch (err) {
+       console.error("Fixture parsing failed:", err);
+       alert("Could not parse fixture properly. Please fill details manually.");
+     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
     try {
       if (!formData.teamA || !formData.teamB || !formData.startTime || !formData.endTime) {
-        setError("Please fill all required fields, including the exact start and end dates/times.");
-        setLoading(false);
-        return;
+        throw new Error("Please fill all required fields, including Teams and Dates.");
       }
-      // Auto-populate options if empty (Default to Team names)
-      const submitData = { ...formData };
-      if (!submitData.options[0]) submitData.options[0] = submitData.teamA;
-      if (!submitData.options[1]) submitData.options[1] = submitData.teamB;
+      if (formData.teamA === formData.teamB) {
+        throw new Error("Team A and Team B cannot be the same.");
+      }
+      if (questions.length === 0) {
+        throw new Error("You must include at least 1 prediction question.");
+      }
+
+      const cleanedQuestions = questions.map(q => ({
+        ...q,
+        options: q.type === "OPTIONS" ? q.options.filter(opt => opt.trim() !== "") : []
+      }));
+
+      const submitData = { ...formData, questions: cleanedQuestions };
 
       const res = await fetch("/api/matches", {
         method: "POST",
@@ -83,173 +247,298 @@ export default function AdminMatchesPage() {
 
       if (res.ok) {
         alert("Match Created Successfully!");
-        setFormData({
-          teamA: "",
-          teamB: "",
-          startTime: "",
-          endTime: "",
-          venue: "",
-          group: "",
-          question: "Who will win?",
-          options: ["", ""]
-        });
-        fetchMatches(); // Refresh list
+        setFormData({ teamA: "", teamB: "", startTime: "", endTime: "", venue: "", group: "" });
+        setQuestions([...DEFAULT_QUESTIONS]);
+        setShowCreateForm(false);
+        fetchMatches();
       } else {
         const data = await res.json();
-        setError(data.error || "Failed to create match");
+        throw new Error(data.error || "Failed to create match");
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
-  return (
-    <div className="p-8 max-w-6xl mx-auto bg-gray-50 dark:bg-[#001f3f] min-h-screen text-gray-800 dark:text-gray-200 rounded-xl">
-      <h1 className="text-3xl font-bold mb-8 text-blue-600">Manage Matches</h1>
+  const deleteMatch = async (id: string) => {
+     alert("Archive/Delete functionality pending endpoint build.");
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  const filteredMatches = filter === "ALL" ? matches : matches.filter(m => m.status === filter);
 
-        {/* CREATE MATCH FORM & API ASSISTANT */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* API Assistant Block */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/30">
-            <h2 className="text-lg font-bold mb-2 flex items-center text-blue-700 dark:text-blue-400">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              Auto-Fill via CricketData
-            </h2>
-            <p className="text-xs text-blue-600/80 dark:text-blue-300/80 mb-4 leading-relaxed">
-              Fetch upcoming fixtures from cricketdata.org to instantly pre-fill the match creation form.
-            </p>
-            <button 
-              type="button"
-              onClick={async () => {
-                setLoading(true);
-                setError("");
-                try {
-                  const res = await fetch('/api/admin/fetch-fixtures');
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || 'Failed to fetch fixture data');
-                  
-                  // Filter valid upcoming matches
-                  const upcomingMatches = data.data?.filter((m: any) => m.matchType !== '') || [];
-                  if (upcomingMatches.length === 0) throw new Error("No upcoming matches found in API response.");
-
-                  // Auto-fill the first available match for the demo/assist
-                  const nextMatch = upcomingMatches[0];
-                  
-                  // Calculate an approximate end time (e.g. 4 hours later for T20)
-                  const startDate = new Date(nextMatch.dateTimeGMT);
-                  const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
-                  
-                  setFormData({
-                    teamA: nextMatch.teamInfo?.[0]?.name || nextMatch.teams?.[0] || "",
-                    teamB: nextMatch.teamInfo?.[1]?.name || nextMatch.teams?.[1] || "",
-                    startTime: startDate.toISOString().slice(0, 16),
-                    endTime: endDate.toISOString().slice(0, 16),
-                    venue: nextMatch.venue || "",
-                    group: nextMatch.series_name || "IPL 2026",
-                    question: "Who will win?",
-                    options: [
-                      nextMatch.teamInfo?.[0]?.name || nextMatch.teams?.[0] || "",
-                      nextMatch.teamInfo?.[1]?.name || nextMatch.teams?.[1] || ""
-                    ]
-                  });
-                  alert("Successfully auto-filled from CricketData API! You can now adjust and click Create Match.");
-                } catch (err: any) {
-                  setError(err.message);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-              className="w-full bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-100 font-bold py-2.5 rounded-lg transition text-sm flex items-center justify-center space-x-2"
-            >
-              <span>Fetch Next Live Match Info</span>
-            </button>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold mb-6 border-b pb-2 dark:border-gray-600">Manual Entry Form</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Team A</label>
-                  <input type="text" name="teamA" value={formData.teamA} onChange={handleInputChange} className="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="e.g. India" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Team B</label>
-                  <input type="text" name="teamB" value={formData.teamB} onChange={handleInputChange} className="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="e.g. Australia" />
-                </div>
+  if (showCreateForm) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto bg-gray-50 dark:bg-[#001f3f] min-h-screen text-gray-800 dark:text-gray-200 rounded-xl space-y-8 pb-24 relative">
+        
+        {/* FIXTURE MODAL COMPONENT */}
+        {showFixturesModal && (
+           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-gray-700">
+                 <div className="p-6 border-b border-slate-200 dark:border-gray-700 flex justify-between items-center bg-slate-50 dark:bg-gray-900">
+                    <div>
+                      <h2 className="text-xl font-bold flex items-center"><DownloadCloud className="mr-2 text-blue-500" /> Live Cricket Fixtures</h2>
+                      <p className="text-xs text-slate-500 font-medium">Powered by API.CricketData.org</p>
+                    </div>
+                    <button onClick={() => setShowFixturesModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-gray-700 rounded-full transition">
+                       <X size={20} />
+                    </button>
+                 </div>
+                 <div className="p-6 overflow-y-auto flex-1 bg-slate-100 dark:bg-gray-800 custom-scrollbar">
+                    {loadingFixtures ? (
+                      <div className="text-center py-12 font-bold text-slate-400">Fetching Network Global Fixtures...</div>
+                    ) : fixtures.length === 0 ? (
+                      <div className="text-center py-12 font-bold text-slate-400">No upcoming matches available.</div>
+                    ) : (
+                      <div className="space-y-3">
+                         {fixtures.map((f) => (
+                           <button 
+                             key={f.id} 
+                             onClick={() => applyFixture(f)}
+                             className="w-full text-left bg-white dark:bg-gray-700 border border-slate-200 dark:border-gray-600 rounded-2xl p-4 hover:border-blue-500 hover:shadow-md transition group"
+                           >
+                              <div className="flex justify-between items-start">
+                                <h3 className="font-extrabold text-[#001f3f] dark:text-gray-100 group-hover:text-blue-600 transition">{f.name}</h3>
+                                <span className="text-[10px] uppercase font-black tracking-widest bg-blue-100 text-blue-600 px-2 py-0.5 rounded">{f.matchType}</span>
+                              </div>
+                              <p className="text-sm font-bold text-slate-500 mt-2 flex items-center">{new Date(f.dateTimeGMT || f.date).toLocaleString()} • {f.venue}</p>
+                           </button>
+                         ))}
+                      </div>
+                    )}
+                 </div>
               </div>
+           </div>
+        )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Start Time</label>
-                  <input type="datetime-local" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">End Time</label>
-                  <input type="datetime-local" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600 text-sm" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Venue</label>
-                <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="Stadium, City" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Tournament / Group</label>
-                <input type="text" name="group" value={formData.group} onChange={handleInputChange} className="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="e.g. IPL 2026" />
-              </div>
-
-              {/* Auto-populated options usually, but allow edit */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Options (Defaults to Team Names)</label>
-                <div className="flex gap-2">
-                  <input type="text" value={formData.options[0]} onChange={(e) => handleOptionChange(0, e.target.value)} className="w-1/2 p-2 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="Option 1" />
-                  <input type="text" value={formData.options[1]} onChange={(e) => handleOptionChange(1, e.target.value)} className="w-1/2 p-2 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="Option 2" />
-                </div>
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full bg-[#001f3f] hover:bg-blue-900 text-white font-bold py-3 rounded-lg transition mt-4 shadow-lg active:scale-[0.98]">
-                {loading ? "Creating..." : "Create Match"}
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+           <div className="flex items-center space-x-4 w-full md:w-auto">
+              <button title="Go Back" onClick={() => setShowCreateForm(false)} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow hover:bg-slate-100 transition shrink-0">
+                 <ArrowLeft size={24} />
               </button>
-              {error && <div className="p-3 bg-red-100 border-l-4 border-red-500 text-red-700 mt-2">{error}</div>}
-            </form>
-          </div>
+              <div>
+                <h1 className="text-3xl font-black text-blue-600 tracking-tight">Create Match</h1>
+                <p className="text-slate-500 font-medium text-sm">Configure details manually or import directly from API.</p>
+              </div>
+           </div>
+           
+           <button onClick={loadFixtures} className="bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-bold py-2.5 px-6 rounded-xl transition shadow-sm flex items-center w-full md:w-auto justify-center">
+              <DownloadCloud size={18} className="mr-2 fill-current opacity-50" />
+              Fetch Live Fixtures
+           </button>
         </div>
 
-        {/* MATCH LIST */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-bold mb-4">Existing Matches</h2>
-          {matches.length === 0 ? (
-            <p className="text-gray-500">No matches found.</p>
-          ) : (
-            <div className="space-y-4">
-              {matches.map((match) => (
-                <div key={match._id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow border border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-lg">{match.teamA} vs {match.teamB}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(match.startTime).toLocaleString()} | <span className={`font-semibold ${match.status === 'LIVE' ? 'text-red-500' : 'text-green-500'}`}>{match.status}</span>
-                    </p>
-                    <p className="text-xs text-gray-400">{match.venue} • {match.group}</p>
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-gray-700">
+           <form onSubmit={handleSubmit} className="space-y-8">
+              
+              <div className="space-y-6">
+                 <h2 className="text-xl font-bold border-b pb-2 dark:border-gray-600">Match Settings</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
+                         Team A
+                         {formData.teamA === "" && <span className="text-red-400 text-[10px]">*Required DB Object</span>}
+                      </label>
+                      <select name="teamA" value={formData.teamA} onChange={handleTeamChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                        <option value="">Select Team</option>
+                        {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
+                         Team B
+                         {formData.teamB === "" && <span className="text-red-400 text-[10px]">*Required DB Object</span>}
+                      </label>
+                      <select name="teamB" value={formData.teamB} onChange={handleTeamChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                        <option value="">Select Team</option>
+                        {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    {/* Future: Add Edit/Delete buttons */}
-                    <button className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Edit</button>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Start Time</label>
+                      <input type="datetime-local" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">End Time</label>
+                      <input type="datetime-local" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Venue</label>
+                      <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Stadium, City" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Tournament</label>
+                      <input type="text" name="group" value={formData.group} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. IPL 2026" />
+                    </div>
+                  </div>
+              </div>
+
+              {/* Questions Builder */}
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center border-b pb-2 dark:border-gray-600">
+                    <h2 className="text-xl font-bold">Prediction Form Builder</h2>
+                    <button type="button" onClick={handleAddQuestion} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition border border-blue-200 shadow-sm flex items-center">
+                       <Plus size={16} className="mr-1"/> Add Question
+                    </button>
+                 </div>
+                 
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto overflow-x-hidden pr-2">
+                    {questions.map((q, i) => (
+                      <div key={q.id} className="bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-600 rounded-2xl p-4 relative group">
+                         <div className="flex items-start gap-4">
+                            <div className="font-black text-slate-300 dark:text-slate-600 text-lg mt-1">{i + 1}.</div>
+                            <div className="flex-1 space-y-3">
+                              
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <input 
+                                   type="text" 
+                                   value={q.text} 
+                                   onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)}
+                                   className="flex-1 p-3 rounded-xl border border-slate-300 dark:bg-gray-800 dark:border-gray-600 font-bold focus:ring-2 focus:ring-blue-500 outline-none" 
+                                   placeholder="Question text (e.g., Who will win?)"
+                                />
+                                <select 
+                                  value={q.type}
+                                  onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value)}
+                                  className="p-3 rounded-xl border border-slate-300 dark:bg-gray-800 dark:border-gray-600 font-bold bg-white text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                                >
+                                  <option value="OPTIONS">Multiple Choice</option>
+                                  <option value="TEXT">Fill-in (Text/Num)</option>
+                                </select>
+                              </div>
+
+                              {q.type === "OPTIONS" && (
+                                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-gray-700">
+                                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Answer Options (Comma Separated)</label>
+                                  <input 
+                                     type="text"
+                                     value={q.options.join(", ")}
+                                     onChange={(e) => handleQuestionChange(q.id, 'options', e.target.value.split(",").map(opt => opt.trimStart()))}
+                                     placeholder="e.g. India, Australia, Over 200"
+                                     className="w-full text-sm font-medium p-2 border-b-2 border-slate-200 dark:border-gray-700 focus:border-blue-500 bg-transparent outline-none transition"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <button type="button" onClick={() => handleRemoveQuestion(q.id)} className="text-slate-300 hover:text-red-500 p-2 bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-slate-200 dark:border-gray-700 transition">
+                               <Trash2 size={20} />
+                            </button>
+                         </div>
+                      </div>
+                    ))}
+                    {questions.length === 0 && (
+                      <div className="p-8 text-center text-slate-400 font-bold border-2 border-dashed border-slate-200 rounded-2xl">
+                        No questions added. You must add at least one question.
+                      </div>
+                    )}
+                 </div>
+              </div>
+
+              <div className="pt-6 border-t dark:border-gray-700">
+                <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-black py-4 rounded-xl transition shadow-xl shadow-blue-500/20 text-lg">
+                  Deploy Match Configuration
+                </button>
+                {error && <div className="p-4 bg-red-100 border border-red-200 text-red-700 rounded-xl mt-4 font-bold text-center">{error}</div>}
+              </div>
+           </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 dark:bg-[#001f3f] min-h-screen text-gray-800 dark:text-gray-200 rounded-xl space-y-8">
+      
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-blue-600 tracking-tight">Match Directory</h1>
+          <p className="text-slate-500 font-medium">Manage existing matches and track incoming predictions.</p>
+        </div>
+        <button 
+           onClick={() => setShowCreateForm(true)}
+           className="bg-[#001f3f] hover:bg-blue-900 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg flex items-center"
+        >
+          <Plus size={20} className="mr-2" />
+          Create New Match
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-slate-200 p-8 h-full">
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <h2 className="text-xl font-bold flex items-center">
+               <Settings2 className="mr-2" size={24} /> Existing Matches
+            </h2>
+            
+            <div className="flex bg-slate-100 dark:bg-gray-900 p-1 rounded-xl border border-slate-200 dark:border-gray-700 w-full sm:w-auto overflow-x-auto no-scrollbar">
+               {(["ALL", "UPCOMING", "LIVE", "COMPLETED"] as const).map(f => (
+                 <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition flex-1 sm:flex-none whitespace-nowrap ${filter === f ? "bg-white dark:bg-gray-700 shadow text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
+                 >
+                   {f}
+                 </button>
+               ))}
+            </div>
+        </div>
+        
+        {loading ? (
+          <p className="text-center py-12 text-slate-500 font-bold">Loading match repository...</p>
+        ) : filteredMatches.length === 0 ? (
+          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center">
+              <p className="text-slate-500 font-bold text-lg">No matches found.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredMatches.map((match) => (
+              <div key={match._id} className="bg-white dark:bg-gray-700 p-6 rounded-2xl border border-slate-200 dark:border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:shadow-lg transition group">
+                
+                <div className="flex items-center space-x-5">
+                  {match.teamA?.logoUrl && match.teamB?.logoUrl ? (
+                     <div className="flex -space-x-4 shrink-0">
+                        <img src={match.teamA.logoUrl} className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-md object-contain z-10" alt="A" />
+                        <img src={match.teamB.logoUrl} className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-md object-contain z-0" alt="B" />
+                     </div>
+                  ) : (
+                     <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center font-bold text-sm text-slate-400 shrink-0 border border-slate-200">VS</div>
+                  )}
+                  
+                  <div>
+                    <h3 className="font-extrabold text-[#001f3f] text-xl tracking-tight">
+                      {match.teamA?.name || 'Unknown'} <span className="text-slate-300 italic font-semibold px-1">vs</span> {match.teamB?.name || 'Unknown'}
+                    </h3>
+                    <p className="text-sm font-bold text-slate-500 mt-1 flex items-center">
+                      {new Date(match.startTime).toLocaleString()}
+                      <span className={`ml-3 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-widest ${match.status === 'LIVE' ? 'bg-red-100 text-red-600 animate-pulse' : match.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {match.status}
+                      </span>
+                    </p>
+                    <p className="text-xs font-semibold text-slate-400 mt-1">{match.venue} • {match.group}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                
+                <div className="flex w-full md:w-auto space-x-3 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                  <Link href={`/admin/matches/${match._id}`} className="flex-1 md:flex-none text-center px-6 py-3 bg-[#001f3f] hover:bg-blue-900 text-white font-bold text-sm rounded-xl transition flex items-center justify-center shadow-md">
+                     <List size={18} className="mr-2" />
+                     Predictions
+                  </Link>
+                  <button onClick={() => deleteMatch(match._id)} className="px-4 py-3 border-2 border-slate-100 text-slate-400 group-hover:text-red-500 group-hover:border-red-100 rounded-xl hover:bg-red-50 transition shadow-sm">
+                    <Trash2 size={20} />
+                  </button>
+                </div>
 
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
     </div>
   );
 }

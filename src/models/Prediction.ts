@@ -1,17 +1,27 @@
 import mongoose, { Schema, Model, models } from 'mongoose';
 
+export interface IPredictionAnswer {
+  questionId: mongoose.Types.ObjectId;
+  value: string;
+}
+
 export interface IPrediction {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   matchId: mongoose.Types.ObjectId;
-  selectedOption: string;
+  answers: IPredictionAnswer[];
   predictedAt: Date;
 }
+
+const PredictionAnswerSchema = new Schema<IPredictionAnswer>({
+  questionId: { type: Schema.Types.ObjectId, required: true },
+  value: { type: String, required: true },
+});
 
 const PredictionSchema = new Schema<IPrediction>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   matchId: { type: Schema.Types.ObjectId, ref: 'Match', required: true },
-  selectedOption: { type: String, required: true },
+  answers: { type: [PredictionAnswerSchema], required: true },
   predictedAt: { type: Date, default: Date.now },
 });
 
