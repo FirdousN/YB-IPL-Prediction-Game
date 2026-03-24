@@ -75,7 +75,7 @@ export default function NavClient() {
 
                     {/* Center Navigation Links */}
                     <div className="hidden lg:flex items-center space-x-8 text-sm font-black tracking-widest text-gray-300 uppercase">
-                        <Link href="/site/matches" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Matches & Results</Link>
+                        <Link href="/site/fixtures" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Fixtures & Results</Link>
                         <Link href="/site/points-table" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Points Table</Link>
                         <Link href="/site/stats" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Overall Stats</Link>
                         <Link href="/site/teams" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">All Teams</Link>

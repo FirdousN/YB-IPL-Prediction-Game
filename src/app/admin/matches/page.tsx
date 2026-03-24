@@ -61,6 +61,8 @@ export default function AdminMatchesPage() {
   const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
   const [loadingFixtures, setLoadingFixtures] = useState(false);
 
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     teamA: "",
     teamB: "",
@@ -83,7 +85,9 @@ export default function AdminMatchesPage() {
       const res = await fetch("/api/admin/matches");
       if (res.ok) {
         const data = await res.json();
-        setMatches(data);
+        // Sort matches chronologically by default
+        const sorted = data.sort((a: Match, b: Match) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        setMatches(sorted);
       }
     } catch {
       console.error("Failed to load matches");
@@ -217,6 +221,32 @@ export default function AdminMatchesPage() {
      }
   };
 
+  const editMatch = (match: Match) => {
+     setFormData({
+       teamA: match.teamA._id,
+       teamB: match.teamB._id,
+       startTime: new Date(new Date(match.startTime).getTime() - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+       endTime: new Date(new Date(match.startTime).getTime() + 4 * 60 * 60 * 1000 - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+       venue: match.venue || "",
+       group: match.group || ""
+     });
+     
+     if (match.questions && match.questions.length > 0) {
+        setQuestions(match.questions.map(q => ({
+           id: q._id || `custom_${Date.now()}_${Math.random()}`,
+           text: q.text,
+           type: q.type,
+           options: q.options || []
+        })));
+     } else {
+        setQuestions([...DEFAULT_QUESTIONS]);
+        // Update Options dynamically based on teams
+        updateQ1(match.teamA._id, match.teamB._id);
+     }
+     setEditingMatchId(match._id);
+     setShowCreateForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -239,16 +269,26 @@ export default function AdminMatchesPage() {
 
       const submitData = { ...formData, questions: cleanedQuestions };
 
-      const res = await fetch("/api/matches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
+      let res;
+      if (editingMatchId) {
+         res = await fetch(`/api/admin/matches/${editingMatchId}`, {
+           method: "PUT",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify(submitData),
+         });
+      } else {
+         res = await fetch("/api/matches", {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify(submitData),
+         });
+      }
 
       if (res.ok) {
-        alert("Match Created Successfully!");
+        alert(`Match ${editingMatchId ? 'Updated' : 'Created'} Successfully!`);
         setFormData({ teamA: "", teamB: "", startTime: "", endTime: "", venue: "", group: "" });
         setQuestions([...DEFAULT_QUESTIONS]);
+        setEditingMatchId(null);
         setShowCreateForm(false);
         fetchMatches();
       } else {
@@ -510,10 +550,10 @@ export default function AdminMatchesPage() {
                   )}
                   
                   <div>
-                    <h3 className="font-extrabold text-[#001f3f] text-xl tracking-tight">
-                      {match.teamA?.name || 'Unknown'} <span className="text-slate-300 italic font-semibold px-1">vs</span> {match.teamB?.name || 'Unknown'}
+                    <h3 className="font-extrabold text-[#001f3f] dark:text-white text-xl tracking-tight">
+                      {match.teamA?.name || 'Unknown'} <span className="text-slate-400 dark:text-slate-300 italic font-semibold px-1">vs</span> {match.teamB?.name || 'Unknown'}
                     </h3>
-                    <p className="text-sm font-bold text-slate-500 mt-1 flex items-center">
+                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1 flex items-center">
                       {new Date(match.startTime).toLocaleString()}
                       <span className={`ml-3 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-widest ${match.status === 'LIVE' ? 'bg-red-100 text-red-600 animate-pulse' : match.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                           {match.status}
@@ -524,11 +564,14 @@ export default function AdminMatchesPage() {
                 </div>
                 
                 <div className="flex w-full md:w-auto space-x-3 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                  <button onClick={() => editMatch(match)} className="px-4 py-3 border-2 border-slate-100 text-slate-500 hover:text-blue-500 hover:border-blue-200 rounded-xl hover:bg-blue-50 transition shadow-sm font-bold flex items-center">
+                    <Settings2 size={16} className="mr-2" /> Edit Match
+                  </button>
                   <Link href={`/admin/matches/${match._id}`} className="flex-1 md:flex-none text-center px-6 py-3 bg-[#001f3f] hover:bg-blue-900 text-white font-bold text-sm rounded-xl transition flex items-center justify-center shadow-md">
                      <List size={18} className="mr-2" />
                      Predictions
                   </Link>
-                  <button onClick={() => deleteMatch(match._id)} className="px-4 py-3 border-2 border-slate-100 text-slate-400 group-hover:text-red-500 group-hover:border-red-100 rounded-xl hover:bg-red-50 transition shadow-sm">
+                  <button onClick={() => deleteMatch(match._id)} className="px-4 py-3 border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 rounded-xl hover:bg-red-50 transition shadow-sm">
                     <Trash2 size={20} />
                   </button>
                 </div>

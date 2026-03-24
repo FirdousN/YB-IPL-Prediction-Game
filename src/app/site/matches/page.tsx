@@ -28,7 +28,7 @@ interface Prediction {
 }
 
 export default function MatchesPage() {
-  const [activeTab, setActiveTab] = useState<"TODAY" | "TOMORROW" | "MY_PICKS" | "LIVE">("TODAY");
+  const [activeTab, setActiveTab] = useState<"UPCOMING" | "LIVE" | "COMPLETED" | "MY_PICKS">("UPCOMING");
   const [matches, setMatches] = useState<Match[]>([]);
   const [myPicks, setMyPicks] = useState<Prediction[]>([]);
   const [liveMatches, setLiveMatches] = useState<any[]>([]);
@@ -43,7 +43,8 @@ export default function MatchesPage() {
         const resMatches = await fetch("/api/matches");
         if (!resMatches.ok) throw new Error("Failed to fetch matches");
         const dataMatches = await resMatches.json();
-        setMatches(dataMatches);
+        const sorted = dataMatches.sort((a: Match, b: Match) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        setMatches(sorted);
 
         // Fetch My Picks
         try {
@@ -73,24 +74,11 @@ export default function MatchesPage() {
   }, []);
 
   const getFilteredMatches = () => {
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-
-    const startOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    const endOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
-
-    if (activeTab === "TODAY") {
-      return matches.filter(m => {
-        const d = new Date(m.startTime);
-        return d >= startOfToday && d < endOfToday;
-      });
+    if (activeTab === "UPCOMING") {
+      return matches.filter(m => m.status === "UPCOMING" || new Date(m.startTime) > new Date());
     }
-    if (activeTab === "TOMORROW") {
-      return matches.filter(m => {
-        const d = new Date(m.startTime);
-        return d >= startOfTomorrow && d < endOfTomorrow;
-      });
+    if (activeTab === "COMPLETED") {
+      return matches.filter(m => m.status === "COMPLETED" || new Date(m.startTime) < new Date(Date.now() - 6 * 60 * 60 * 1000));
     }
     if (activeTab === "MY_PICKS") {
       return myPicks.map(p => ({ ...p.matchId }));
@@ -112,7 +100,7 @@ export default function MatchesPage() {
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex justify-center space-x-1 bg-gray-800/50 p-1 rounded-xl max-w-lg mx-auto backdrop-blur-sm border border-white/5 overflow-x-auto">
-        {(["TODAY", "TOMORROW", "MY_PICKS", "LIVE"] as const).map((tab) => (
+        {(["UPCOMING", "LIVE", "COMPLETED", "MY_PICKS"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}

@@ -11,6 +11,9 @@ const updateMatchSchema = z.object({
   endTime: z.string().datetime().optional(),
   status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'ABANDONED']).optional(),
   result: z.string().optional(),
+  venue: z.string().optional(),
+  group: z.string().optional(),
+  questions: z.array(z.any()).optional(),
 });
 
 async function isAdmin(request: NextRequest) {
