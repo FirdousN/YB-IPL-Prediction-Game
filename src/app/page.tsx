@@ -59,18 +59,20 @@ export default function Home() {
 
           {/* List of matches */}
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-left w-full">
-            <div className="p-6 bg-white/10 rounded-xl backdrop-blur-sm border border-white/5 hover:border-blue-500/50 transition duration-300">
-              <h3 className="text-xl font-bold mb-2 text-blue-300">Live Matches</h3>
+            <Link href="/site/matches" className="p-6 bg-white/10 rounded-xl backdrop-blur-sm border border-white/5 hover:border-blue-500/50 hover:bg-blue-900/30 transition duration-300 cursor-pointer group block">
+              <h3 className="text-xl font-bold mb-2 text-blue-300 group-hover:text-blue-400">Live Matches</h3>
               <p className="text-gray-400">Get real-time updates and predict on live games.</p>
-            </div>
-            <div className="p-6 bg-white/10 rounded-xl backdrop-blur-sm border border-white/5 hover:border-purple-500/50 transition duration-300">
-              <h3 className="text-xl font-bold mb-2 text-purple-300">Win Prizes</h3>
+            </Link>
+            
+            <Link href="/site/rewards" className="p-6 bg-white/10 rounded-xl backdrop-blur-sm border border-white/5 hover:border-purple-500/50 hover:bg-purple-900/30 transition duration-300 cursor-pointer group block">
+              <h3 className="text-xl font-bold mb-2 text-purple-300 group-hover:text-purple-400">Win Prizes</h3>
               <p className="text-gray-400">Top predictors every day win exciting rewards.</p>
-            </div>
-            <div className="p-6 bg-white/10 rounded-xl backdrop-blur-sm border border-white/5 hover:border-green-500/50 transition duration-300">
-              <h3 className="text-xl font-bold mb-2 text-green-300">Leaderboard</h3>
+            </Link>
+            
+            <Link href="/site/leaderboard" className="p-6 bg-white/10 rounded-xl backdrop-blur-sm border border-white/5 hover:border-green-500/50 hover:bg-green-900/30 transition duration-300 cursor-pointer group block">
+              <h3 className="text-xl font-bold mb-2 text-green-300 group-hover:text-green-400">Leaderboard</h3>
               <p className="text-gray-400">Climb the ranks and show off your cricket knowledge.</p>
-            </div>
+            </Link>
           </div>
         </main>
       </div>

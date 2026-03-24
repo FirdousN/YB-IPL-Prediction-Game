@@ -16,10 +16,9 @@ export async function middleware(request: NextRequest) {
 
     // 1. Admin Route Protection
     if (isProtectedAdmin) {
-        // Allow access to admin login page
         if (path === '/admin/login' || path === '/api/admin/login') {
             if (session?.role === 'admin' && path === '/admin/login') {
-                return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+                return NextResponse.redirect(new URL('/admin', request.url));
             }
             return NextResponse.next();
         }

@@ -1,6 +1,10 @@
 import { getSession } from "@/src/lib/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import dbConnect from "@/src/lib/db";
+import User from "@/src/models/User";
+import Match from "@/src/models/Match";
+import Prediction from "@/src/models/Prediction";
 import { 
   Calendar, 
   Trophy, 
@@ -13,15 +17,26 @@ import {
 export default async function AdminDashboard() {
   const session = await getSession() as { role?: string, name?: string } | null;
   
-  if (!session || session.role !== 'ADMIN') {
+  if (!session || (session.role !== 'admin' && session.role !== 'ADMIN')) {
     redirect("/admin/login");
   }
 
+  // Connect to DB to fetch real stats
+  await dbConnect();
+
+  const [activeMatches, totalUsers, totalPredictions, completedMatches, recentMatches] = await Promise.all([
+    Match.countDocuments({ status: { $in: ['LIVE', 'UPCOMING'] } }),
+    User.countDocuments({ role: 'user' }), // only count standard users
+    Prediction.countDocuments(),
+    Match.countDocuments({ status: 'COMPLETED' }),
+    Match.find().sort({ startTime: -1 }).limit(4).select('teamA teamB status startTime').lean()
+  ]);
+
   const stats = [
-    { label: "Active Matches", value: "12", icon: Calendar, color: "bg-blue-500", trend: "+2 this week" },
-    { label: "Total Users", value: "1,240", icon: Users, color: "bg-purple-500", trend: "+12.5% monthly" },
-    { label: "Predictions", value: "8,542", icon: TrendingUp, color: "bg-emerald-500", trend: "+24% this IPL" },
-    { label: "Prizes Claimed", value: "450", icon: Trophy, color: "bg-amber-500", trend: "+12 امروز" },
+    { label: "Active Matches", value: activeMatches.toString(), icon: Calendar, color: "bg-blue-500", trend: "Live & Upcoming" },
+    { label: "Total Users", value: totalUsers.toString(), icon: Users, color: "bg-purple-500", trend: "Registered Players" },
+    { label: "Total Predictions", value: totalPredictions.toString(), icon: TrendingUp, color: "bg-emerald-500", trend: "All Time" },
+    { label: "Completed Matches", value: completedMatches.toString(), icon: Trophy, color: "bg-amber-500", trend: "Ready for Results" },
   ];
 
   const quickActions = [
@@ -122,27 +137,28 @@ export default async function AdminDashboard() {
             Recent Log
           </h3>
           <div className="space-y-6">
-            {[
-              { text: "New match scheduled: MI vs CSK", time: "10 mins ago", type: "match" },
-              { text: "Winner declared for RCB vs KKR", time: "1 hour ago", type: "winner" },
-              { text: "50 new users registered", time: "2 hours ago", type: "user" },
-              { text: "Server maintenance completed", time: "1 day ago", type: "system" },
-            ].map((activity, i) => (
+            {recentMatches.length > 0 ? recentMatches.map((match: any, i: number) => (
               <div key={i} className="flex space-x-4">
                 <div className="mt-1.5 flex flex-col items-center">
                   <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                  {i < 3 && <div className="w-px h-full bg-slate-100 mt-1"></div>}
+                  {i < Math.min(recentMatches.length, 4) - 1 && <div className="w-px h-full bg-slate-100 mt-1"></div>}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 tracking-tight">{activity.text}</p>
-                  <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-tighter">{activity.time}</p>
+                  <p className="text-sm font-semibold text-slate-700 tracking-tight">
+                    {match.teamA} vs {match.teamB}
+                  </p>
+                  <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-tighter">
+                    {match.status} &bull; {new Date(match.startTime).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm font-semibold text-slate-400">No recent matches found.</p>
+            )}
           </div>
-          <button className="mt-8 py-3 text-sm font-bold text-[#001f3f] border border-[#001f3f]/10 rounded-xl hover:bg-slate-50 transition-colors bg-white">
-            View All Logs
-          </button>
+          <Link href="/admin/matches" className="mt-8 py-3 text-sm font-bold text-[#001f3f] border border-[#001f3f]/10 rounded-xl hover:bg-slate-50 transition-colors bg-white text-center block">
+            View All Matches
+          </Link>
         </div>
       </div>
     </div>
