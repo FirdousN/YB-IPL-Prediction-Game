@@ -57,7 +57,7 @@ export default function NavClient() {
     };
 
     return (
-        <nav className="absolute fixed top-0 w-full z-50 bg-gray-900/40 backdrop-blur-md border-b border-gray-800">
+        <nav className="fixed top-0 w-full z-50 bg-gray-900/40 backdrop-blur-md border-b border-gray-800">
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center w-full py-3">
 
