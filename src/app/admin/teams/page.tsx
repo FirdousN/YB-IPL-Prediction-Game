@@ -76,12 +76,14 @@ export default function AdminTeamsPage() {
         res = await fetch(`/api/admin/teams/${editingTeamId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(formData)
         });
       } else {
         res = await fetch("/api/admin/teams", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(formData)
         });
       }
@@ -107,7 +109,10 @@ export default function AdminTeamsPage() {
     setIsDeleting(id);
 
     try {
-      const res = await fetch(`/api/admin/teams/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/teams/${id}`, { 
+        method: "DELETE",
+        credentials: "include"
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to delete team");

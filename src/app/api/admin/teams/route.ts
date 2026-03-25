@@ -15,8 +15,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    console.log('[DEBUG] request.cookies:', request.cookies.getAll());
+    const session = await getSession(request);
+    console.log('[DEBUG] POST /api/admin/teams -> session:', session);
+    
     if (!session || (session.role !== 'admin' && (session as any).role !== 'ADMIN')) {
+      console.log('[DEBUG] Unauthorized. Session is:', session);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

@@ -30,6 +30,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
         });
         return payload as unknown as JWTPayload;
     } catch (error) {
+        console.error('[DEBUG] jwtVerify error:', error);
         return null;
     }
 }

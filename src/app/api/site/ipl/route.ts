@@ -1,40 +1,56 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/src/lib/db';
+import Match from '@/src/models/Match';
+import Team from '@/src/models/Team';
 
-export const revalidate = 3600; // Cache for 1 hour to heavily protect the API limit
+export const revalidate = 60; // Cache for 1 minute
 
-export async function GET() {
-  const apiKey = process.env.CRICKETDATA_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
-
+export async function GET(request: NextRequest) {
   try {
-    const seriesRes = await fetch(`https://api.cricapi.com/v1/series?apikey=${apiKey}&offset=0`);
-    const seriesData = await seriesRes.json();
-    
-    // Attempt to locate IPL 2026 primarily, fallback to any IPL if unavailable
-    let iplSeries = seriesData.data?.find((s: any) => 
-      s.name.toLowerCase().includes("premier") && s.name.includes("2026")
-    );
-    
-    if (!iplSeries) {
-      iplSeries = seriesData.data?.find((s: any) => 
-        s.name.toLowerCase().includes("premier") || s.name.toLowerCase().includes("ipl")
-      );
-    }
+    await dbConnect();
+    // Ensure Team model is registered
+    if (!Team) { console.log('Team model ensuring load...'); }
 
-    if (!iplSeries) {
-      return NextResponse.json({ error: "IPL Series not found in API" }, { status: 404 });
-    }
+    // Fetch all internal matches
+    const internalMatches = await Match.find()
+      .populate('teamA')
+      .populate('teamB')
+      .sort({ startTime: 1 });
 
-    // Fetch full match list
-    const matchRes = await fetch(`https://api.cricapi.com/v1/series_info?apikey=${apiKey}&id=${iplSeries.id}`);
-    const matchData = await matchRes.json();
+    // Format matches to match expected structure in site pages
+    const formattedMatches = internalMatches.map(m => {
+      const matchObj = m.toObject();
+      return {
+        id: matchObj._id,
+        name: `${(matchObj.teamA as any).shortName} vs ${(matchObj.teamB as any).shortName}`,
+        matchType: 't20',
+        status: matchObj.status === 'UPCOMING' ? 'UPCOMING' : (matchObj.result || 'Match in progress'),
+        venue: matchObj.venue || 'TBD',
+        date: matchObj.startTime,
+        dateTimeGMT: matchObj.startTime,
+        teamInfo: [
+          {
+            name: (matchObj.teamA as any).name,
+            shortname: (matchObj.teamA as any).shortName,
+            img: (matchObj.teamA as any).logoUrl
+          },
+          {
+            name: (matchObj.teamB as any).name,
+            shortname: (matchObj.teamB as any).shortName,
+            img: (matchObj.teamB as any).logoUrl
+          }
+        ],
+        matchEnded: matchObj.status === 'COMPLETED'
+      };
+    });
 
     return NextResponse.json({
-       series: iplSeries,
-       matches: matchData.data?.matchList || []
+       series: { name: "TATA IPL 2026", id: "internal-ipl-2026" },
+       matches: formattedMatches
     });
 
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+

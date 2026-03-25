@@ -77,6 +77,14 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
     fetchMatch();
   }, [resolvedParams.matchId]);
 
+  const isMatchToday = (isoString: string) => {
+    const today = new Date();
+    const matchDate = new Date(isoString);
+    return today.getFullYear() === matchDate.getFullYear() && 
+           today.getMonth() === matchDate.getMonth() && 
+           today.getDate() === matchDate.getDate();
+  };
+
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers(prev => prev.map(a => a.questionId === questionId ? { ...a, value } : a));
   };
@@ -163,74 +171,88 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
         
         <div className="border-b border-gray-800 pb-6 text-center">
             <h2 className="text-2xl font-black text-white">Your Predictions</h2>
-            <p className="text-gray-400 mt-2">Answer all {match.questions?.length || 5} questions to submit your entry.</p>
+            <p className="text-gray-400 mt-2">
+              {match.status === "COMPLETED" 
+                ? "Match has ended. See your submitted answers below." 
+                : match.isLocked 
+                  ? "Predictions are locked. See your submitted answers below."
+                  : "Answer all questions to submit your entry."}
+            </p>
         </div>
 
         {error && <div className="p-4 bg-red-900/30 border border-red-500/50 text-red-200 rounded-xl font-bold text-center">{error}</div>}
 
-        <div className="space-y-12">
-          {match.questions?.map((q, index) => {
-            const currentAnswer = answers.find(a => a.questionId === q._id)?.value || "";
-            return (
-              <div key={q._id} className="space-y-4">
-                <h3 className="text-xl font-bold text-blue-400 leading-snug">
-                  <span className="text-gray-500 mr-2">Q{index + 1}.</span> {q.text}
-                </h3>
-                
-                {q.type === 'OPTIONS' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {q.options.map((option) => (
-                      <button
-                        type="button"
-                        key={option}
-                        disabled={match.isLocked}
-                        onClick={() => handleAnswerChange(q._id, option)}
-                        className={`p-4 rounded-xl text-lg font-bold transition-all border-2 text-left flex items-center justify-between
-                          ${currentAnswer === option 
-                            ? "bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
-                            : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"}
-                          ${match.isLocked ? "opacity-50 cursor-not-allowed" : ""}
-                        `}
-                      >
-                        {option}
-                        {currentAnswer === option && <span className="bg-blue-400 w-4 h-4 rounded-full ml-4 shadow-sm"></span>}
-                      </button>
-                    ))}
+        {!isMatchToday(match.startTime) && match.status === "UPCOMING" ? (
+          <div className="p-12 text-center border-2 border-dashed border-gray-700 bg-gray-800/30 rounded-2xl">
+            <p className="text-xl font-bold text-blue-400 mb-2">Predictions Not Yet Open</p>
+            <p className="text-gray-400">You can only enter your predictions on the actual day of the match.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-12">
+              {match.questions?.map((q, index) => {
+                const currentAnswer = answers.find(a => a.questionId === q._id)?.value || "";
+                return (
+                  <div key={q._id} className="space-y-4">
+                    <h3 className="text-xl font-bold text-blue-400 leading-snug">
+                      <span className="text-gray-500 mr-2">Q{index + 1}.</span> {q.text}
+                    </h3>
+                    
+                    {q.type === 'OPTIONS' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {q.options.map((option) => (
+                          <button
+                            type="button"
+                            key={option}
+                            disabled={match.isLocked}
+                            onClick={() => handleAnswerChange(q._id, option)}
+                            className={`p-4 rounded-xl text-lg font-bold transition-all border-2 text-left flex items-center justify-between
+                              ${currentAnswer === option 
+                                ? "bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
+                                : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"}
+                              ${match.isLocked ? "opacity-50 cursor-not-allowed" : ""}
+                            `}
+                          >
+                            {option}
+                            {currentAnswer === option && <span className="bg-blue-400 w-4 h-4 rounded-full ml-4 shadow-sm"></span>}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div>
+                        <input 
+                          type="text" 
+                          value={currentAnswer}
+                          disabled={match.isLocked}
+                          onChange={(e) => handleAnswerChange(q._id, e.target.value)}
+                          placeholder="Type your answer here..."
+                          className="w-full bg-gray-800 border-2 border-gray-700 focus:border-blue-500 rounded-xl px-5 py-4 text-white text-lg font-medium transition focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:opacity-50"
+                        />
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-8 border-t border-gray-800 text-center">
+                {match.isLocked ? (
+                  <p className="text-red-400 font-bold bg-red-900/20 py-4 rounded-xl border border-red-900/50">
+                    LOCKED: Predictions for this match are closed.
+                  </p>
                 ) : (
-                  <div>
-                    <input 
-                      type="text" 
-                      value={currentAnswer}
-                      disabled={match.isLocked}
-                      onChange={(e) => handleAnswerChange(q._id, e.target.value)}
-                      placeholder="Type your answer here..."
-                      className="w-full bg-gray-800 border-2 border-gray-700 focus:border-blue-500 rounded-xl px-5 py-4 text-white text-lg font-medium transition focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:opacity-50"
-                    />
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-xl rounded-2xl transition-all shadow-xl shadow-blue-900/30 hover:shadow-blue-900/50 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center mx-auto"
+                  >
+                    {isSubmitting ? "Saving..." : "Lock In Predictions"}
+                  </button>
                 )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="pt-8 border-t border-gray-800 text-center">
-            {match.isLocked ? (
-              <p className="text-red-400 font-bold bg-red-900/20 py-4 rounded-xl border border-red-900/50">
-                LOCKED: Predictions for this match are closed.
-              </p>
-            ) : (
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-xl rounded-2xl transition-all shadow-xl shadow-blue-900/30 hover:shadow-blue-900/50 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center mx-auto"
-              >
-                {isSubmitting ? "Saving..." : "Lock In Predictions"}
-              </button>
-            )}
-            {!match.isLocked && <p className="text-sm text-gray-500 mt-4">You can edit these until 30 minutes before the match starts.</p>}
-        </div>
-
+                {!match.isLocked && <p className="text-sm text-gray-500 mt-4">You can edit these until 30 minutes before the match starts.</p>}
+            </div>
+          </>
+        )}
       </form>
 
     </div>

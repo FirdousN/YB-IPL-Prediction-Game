@@ -57,6 +57,14 @@ export default function MatchCard({ match }: MatchProps) {
     return () => clearInterval(timer);
   }, [match.startTime]);
 
+  const isMatchToday = (isoString: string) => {
+    const today = new Date();
+    const matchDate = new Date(isoString);
+    return today.getFullYear() === matchDate.getFullYear() && 
+           today.getMonth() === matchDate.getMonth() && 
+           today.getDate() === matchDate.getDate();
+  };
+
   // Determine Button State
   const renderButton = () => {
     if (match.isLocked || match.status === "COMPLETED") {
@@ -76,11 +84,19 @@ export default function MatchCard({ match }: MatchProps) {
     }
 
     if (isUpcoming) {
-       return (
-        <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded transition shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-          Predict Now
-        </Link>
-      );
+       if (isMatchToday(match.startTime)) {
+         return (
+          <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded transition shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+            Predict Now
+          </Link>
+         );
+       } else {
+         return (
+          <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 border border-gray-600 hover:bg-gray-800 text-gray-300 font-bold rounded transition">
+            Opens on Match Day
+          </Link>
+         );
+       }
     }
     
     // Default fallback

@@ -91,25 +91,25 @@ export default function AdminMatchPredictionsPage({ params }: { params: Promise<
 
       {/* Match Overview Card */}
       <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-8">
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-6 flex-1 min-w-0">
            {match.teamA?.logoUrl && match.teamB?.logoUrl ? (
-              <div className="flex items-center space-x-4">
-                 <img src={match.teamA.logoUrl} className="w-20 h-20 rounded-full shadow-lg border-4 border-slate-100 object-contain p-1" alt="A" />
-                 <span className="text-2xl font-black text-slate-300 italic">VS</span>
-                 <img src={match.teamB.logoUrl} className="w-20 h-20 rounded-full shadow-lg border-4 border-slate-100 object-contain p-1" alt="B" />
+              <div className="flex items-center space-x-4 shrink-0">
+                 <img src={match.teamA.logoUrl} className="w-20 h-20 shrink-0 rounded-full shadow-lg border-4 border-slate-100 bg-white object-contain p-1" alt="A" />
+                 <span className="text-2xl shrink-0 font-black text-slate-300 dark:text-gray-500 flex-shrink-0 italic">VS</span>
+                 <img src={match.teamB.logoUrl} className="w-20 h-20 shrink-0 rounded-full shadow-lg border-4 border-slate-100 bg-white object-contain p-1" alt="B" />
               </div>
            ) : (
-             <div className="text-4xl font-black text-slate-800 dark:text-gray-200">
+             <div className="text-4xl font-black shrink-0 text-slate-800 dark:text-gray-200">
                 {match.teamA?.shortName} vs {match.teamB?.shortName}
              </div>
            )}
            
-           <div className="hidden md:block">
-             <h2 className="text-2xl font-black text-[#001f3f] dark:text-gray-100">{match.teamA?.name} vs {match.teamB?.name}</h2>
-             <div className="flex items-center space-x-4 mt-2 text-sm text-slate-500 font-medium">
-                <span className="flex items-center"><Calendar size={16} className="mr-1"/> {new Date(match.startTime).toLocaleDateString()}</span>
-                <span className="flex items-center"><MapPin size={16} className="mr-1"/> {match.venue || 'TBD'}</span>
-                <span className={`px-2 py-0.5 rounded uppercase font-black tracking-widest text-[10px] ${match.status === 'LIVE' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+           <div className="hidden md:block min-w-0 flex-1">
+             <h2 className="text-2xl font-black text-[#001f3f] dark:text-gray-100 truncate">{match.teamA?.name} vs {match.teamB?.name}</h2>
+             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-slate-500 font-medium">
+                <span className="flex items-center whitespace-nowrap"><Calendar size={16} className="mr-1"/> {new Date(match.startTime).toLocaleDateString()}</span>
+                <span className="flex items-center whitespace-nowrap max-w-full truncate"><MapPin size={16} className="mr-1 shrink-0"/> <span className="truncate">{match.venue || 'TBD'}</span></span>
+                <span className={`px-2 py-0.5 rounded uppercase font-black tracking-widest text-[10px] shrink-0 ${match.status === 'LIVE' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                   {match.status}
                 </span>
              </div>
