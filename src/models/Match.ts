@@ -18,7 +18,11 @@ export interface IMatch {
   questions: IMatchQuestion[];
   venue?: string;
   group?: string;
-  isLocked?: boolean; // Virtual property, not stored
+  result?: string;
+  winner?: mongoose.Types.ObjectId;
+  teamAScore?: { r?: number; w?: number; o?: string };
+  teamBScore?: { r?: number; w?: number; o?: string };
+  createdAt: Date;
 }
 
 const MatchQuestionSchema = new Schema<IMatchQuestion>({
@@ -41,6 +45,18 @@ const MatchSchema = new Schema<IMatch>({
   questions: { type: [MatchQuestionSchema], default: [] },
   venue: { type: String },
   group: { type: String },
+  result: { type: String }, // e.g., "RCB won by 5 runs"
+  winner: { type: Schema.Types.ObjectId, ref: 'Team' },
+  teamAScore: {
+     r: { type: Number }, // runs
+     w: { type: Number }, // wickets
+     o: { type: String }, // overs
+  },
+  teamBScore: {
+     r: { type: Number },
+     w: { type: Number },
+     o: { type: String },
+  },
 });
 
 const Match: Model<IMatch> = models.Match || mongoose.model<IMatch>('Match', MatchSchema);

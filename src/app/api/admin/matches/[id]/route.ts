@@ -7,14 +7,28 @@ import { getSession } from '@/src/lib/session';
 const updateMatchSchema = z.object({
   teamA: z.string().optional(),
   teamB: z.string().optional(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
+  startTime: z.coerce.date().optional(),
+  endTime: z.coerce.date().optional(),
   status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'ABANDONED']).optional(),
   result: z.string().optional(),
+  winner: z.string().optional(),
+  teamAScore: z.object({
+    r: z.number(),
+    w: z.number(),
+    o: z.string()
+  }).optional(),
+  teamBScore: z.object({
+    r: z.number(),
+    w: z.number(),
+    o: z.string()
+  }).optional(),
+  venue: z.string().optional(),
+  group: z.string().optional(),
+  questions: z.array(z.any()).optional(),
 });
 
 async function isAdmin(request: NextRequest) {
-  const session = await getSession();
+  const session = await getSession(request);
   return session && session.role === 'admin';
 }
 

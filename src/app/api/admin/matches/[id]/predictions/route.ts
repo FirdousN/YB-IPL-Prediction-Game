@@ -7,7 +7,7 @@ import { getSession } from '@/src/lib/session';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session || (session.role !== 'admin' && (session as any).role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }

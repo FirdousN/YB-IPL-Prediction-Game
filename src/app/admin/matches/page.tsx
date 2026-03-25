@@ -19,6 +19,10 @@ interface Match {
   status: string;
   venue?: string;
   group?: string;
+  result?: string;
+  winner?: string;
+  teamAScore?: { r: number; w: number; o: string };
+  teamBScore?: { r: number; w: number; o: string };
   questions?: any[];
 }
 
@@ -61,13 +65,20 @@ export default function AdminMatchesPage() {
   const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
   const [loadingFixtures, setLoadingFixtures] = useState(false);
 
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     teamA: "",
     teamB: "",
     startTime: "",
     endTime: "",
     venue: "",
-    group: ""
+    group: "",
+    status: "UPCOMING",
+    result: "",
+    winner: "",
+    teamAScore: { r: 0, w: 0, o: "" },
+    teamBScore: { r: 0, w: 0, o: "" }
   });
 
   const [questions, setQuestions] = useState<QuestionForm[]>([...DEFAULT_QUESTIONS]);
@@ -83,7 +94,9 @@ export default function AdminMatchesPage() {
       const res = await fetch("/api/admin/matches");
       if (res.ok) {
         const data = await res.json();
-        setMatches(data);
+        // Sort matches chronologically by default
+        const sorted = data.sort((a: Match, b: Match) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        setMatches(sorted);
       }
     } catch {
       console.error("Failed to load matches");
@@ -206,7 +219,12 @@ export default function AdminMatchesPage() {
          startTime: startLocal,
          endTime: endLocal,
          venue: fixture.venue || "",
-         group: fixture.matchType ? fixture.matchType.toUpperCase() + " SET" : "Cricket Series"
+         group: fixture.matchType ? fixture.matchType.toUpperCase() + " SET" : "Cricket Series",
+         status: "UPCOMING",
+         result: "",
+         winner: "",
+         teamAScore: { r: 0, w: 0, o: "" },
+         teamBScore: { r: 0, w: 0, o: "" }
        });
 
        updateQ1(matchedTeamAId, matchedTeamBId);
@@ -215,6 +233,37 @@ export default function AdminMatchesPage() {
        console.error("Fixture parsing failed:", err);
        alert("Could not parse fixture properly. Please fill details manually.");
      }
+  };
+
+  const editMatch = (match: Match) => {
+     setFormData({
+       teamA: match.teamA._id,
+       teamB: match.teamB._id,
+       startTime: new Date(new Date(match.startTime).getTime() - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+       endTime: new Date(new Date(match.startTime).getTime() + 4 * 60 * 60 * 1000 - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+        venue: match.venue || "",
+        group: match.group || "",
+        status: match.status || "UPCOMING",
+        result: match.result || "",
+        winner: match.winner || "",
+        teamAScore: match.teamAScore || { r: 0, w: 0, o: "" },
+        teamBScore: match.teamBScore || { r: 0, w: 0, o: "" }
+      });
+     
+     if (match.questions && match.questions.length > 0) {
+        setQuestions(match.questions.map(q => ({
+           id: q._id || `custom_${Date.now()}_${Math.random()}`,
+           text: q.text,
+           type: q.type,
+           options: q.options || []
+        })));
+     } else {
+        setQuestions([...DEFAULT_QUESTIONS]);
+        // Update Options dynamically based on teams
+        updateQ1(match.teamA._id, match.teamB._id);
+     }
+     setEditingMatchId(match._id);
+     setShowCreateForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -239,16 +288,33 @@ export default function AdminMatchesPage() {
 
       const submitData = { ...formData, questions: cleanedQuestions };
 
-      const res = await fetch("/api/matches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
+      let res;
+      if (editingMatchId) {
+         res = await fetch(`/api/admin/matches/${editingMatchId}`, {
+           method: "PUT",
+           headers: { "Content-Type": "application/json" },
+           credentials: "include",
+           body: JSON.stringify(submitData),
+         });
+      } else {
+         res = await fetch("/api/matches", {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           credentials: "include",
+           body: JSON.stringify(submitData),
+         });
+      }
 
       if (res.ok) {
-        alert("Match Created Successfully!");
-        setFormData({ teamA: "", teamB: "", startTime: "", endTime: "", venue: "", group: "" });
+        alert(`Match ${editingMatchId ? 'Updated' : 'Created'} Successfully!`);
+        setFormData({ 
+          teamA: "", teamB: "", startTime: "", endTime: "", venue: "", group: "",
+          status: "UPCOMING", result: "", winner: "",
+          teamAScore: { r: 0, w: 0, o: "" },
+          teamBScore: { r: 0, w: 0, o: "" }
+        });
         setQuestions([...DEFAULT_QUESTIONS]);
+        setEditingMatchId(null);
         setShowCreateForm(false);
         fetchMatches();
       } else {
@@ -374,6 +440,75 @@ export default function AdminMatchesPage() {
                     <div>
                       <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Tournament</label>
                       <input type="text" name="group" value={formData.group} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. IPL 2026" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-4 border-t dark:border-gray-700">
+                    <h2 className="text-xl font-bold flex items-center text-blue-500">Match Outcome & Scoring</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Match Status</label>
+                        <select name="status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full p-3 rounded-xl border font-bold dark:bg-gray-700 dark:border-gray-600 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                           {["UPCOMING", "LIVE", "COMPLETED", "ABANDONED"].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Winner Team</label>
+                        <select name="winner" value={formData.winner} onChange={(e) => setFormData({...formData, winner: e.target.value})} className="w-full p-3 rounded-xl border font-bold dark:bg-gray-700 dark:border-gray-600 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                           <option value="">Select Winner (If Fin.)</option>
+                           {teams.filter(t => t._id === formData.teamA || t._id === formData.teamB).map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Result Text</label>
+                        <input type="text" name="result" value={formData.result} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. MI won by 7 wickets" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-100/50 dark:bg-black/20 p-6 rounded-2xl border border-dashed border-slate-300 dark:border-gray-700">
+                       {/* Team A Score */}
+                       <div className="space-y-4">
+                          <h4 className="font-black text-xs uppercase tracking-[0.2em] text-slate-500 flex items-center">
+                             Team A Performance
+                             {formData.teamA && <span className="ml-2 text-blue-500">({teams.find(t => t._id === formData.teamA)?.shortName})</span>}
+                          </h4>
+                          <div className="grid grid-cols-3 gap-2">
+                             <div>
+                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Runs</label>
+                                <input type="number" value={formData.teamAScore.r} onChange={(e) => setFormData({...formData, teamAScore: {...formData.teamAScore, r: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Wkts</label>
+                                <input type="number" value={formData.teamAScore.w} onChange={(e) => setFormData({...formData, teamAScore: {...formData.teamAScore, w: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Overs</label>
+                                <input type="text" value={formData.teamAScore.o} onChange={(e) => setFormData({...formData, teamAScore: {...formData.teamAScore, o: e.target.value}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700" placeholder="e.g. 20.0" />
+                             </div>
+                          </div>
+                       </div>
+                       {/* Team B Score */}
+                       <div className="space-y-4">
+                          <h4 className="font-black text-xs uppercase tracking-[0.2em] text-slate-500 flex items-center">
+                             Team B Performance
+                             {formData.teamB && <span className="ml-2 text-blue-500">({teams.find(t => t._id === formData.teamB)?.shortName})</span>}
+                          </h4>
+                          <div className="grid grid-cols-3 gap-2">
+                             <div>
+                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Runs</label>
+                                <input type="number" value={formData.teamBScore.r} onChange={(e) => setFormData({...formData, teamBScore: {...formData.teamBScore, r: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Wkts</label>
+                                <input type="number" value={formData.teamBScore.w} onChange={(e) => setFormData({...formData, teamBScore: {...formData.teamBScore, w: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Overs</label>
+                                <input type="text" value={formData.teamBScore.o} onChange={(e) => setFormData({...formData, teamBScore: {...formData.teamBScore, o: e.target.value}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700" placeholder="e.g. 19.4" />
+                             </div>
+                          </div>
+                       </div>
                     </div>
                   </div>
               </div>
@@ -510,10 +645,10 @@ export default function AdminMatchesPage() {
                   )}
                   
                   <div>
-                    <h3 className="font-extrabold text-[#001f3f] text-xl tracking-tight">
-                      {match.teamA?.name || 'Unknown'} <span className="text-slate-300 italic font-semibold px-1">vs</span> {match.teamB?.name || 'Unknown'}
+                    <h3 className="font-extrabold text-[#001f3f] dark:text-white text-xl tracking-tight">
+                      {match.teamA?.name || 'Unknown'} <span className="text-slate-400 dark:text-slate-300 italic font-semibold px-1">vs</span> {match.teamB?.name || 'Unknown'}
                     </h3>
-                    <p className="text-sm font-bold text-slate-500 mt-1 flex items-center">
+                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1 flex items-center">
                       {new Date(match.startTime).toLocaleString()}
                       <span className={`ml-3 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-widest ${match.status === 'LIVE' ? 'bg-red-100 text-red-600 animate-pulse' : match.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                           {match.status}
@@ -524,11 +659,14 @@ export default function AdminMatchesPage() {
                 </div>
                 
                 <div className="flex w-full md:w-auto space-x-3 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                  <button onClick={() => editMatch(match)} className="px-4 py-3 border-2 border-slate-100 text-slate-500 hover:text-blue-500 hover:border-blue-200 rounded-xl hover:bg-blue-50 transition shadow-sm font-bold flex items-center">
+                    <Settings2 size={16} className="mr-2" /> Edit Match
+                  </button>
                   <Link href={`/admin/matches/${match._id}`} className="flex-1 md:flex-none text-center px-6 py-3 bg-[#001f3f] hover:bg-blue-900 text-white font-bold text-sm rounded-xl transition flex items-center justify-center shadow-md">
                      <List size={18} className="mr-2" />
                      Predictions
                   </Link>
-                  <button onClick={() => deleteMatch(match._id)} className="px-4 py-3 border-2 border-slate-100 text-slate-400 group-hover:text-red-500 group-hover:border-red-100 rounded-xl hover:bg-red-50 transition shadow-sm">
+                  <button onClick={() => deleteMatch(match._id)} className="px-4 py-3 border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 rounded-xl hover:bg-red-50 transition shadow-sm">
                     <Trash2 size={20} />
                   </button>
                 </div>

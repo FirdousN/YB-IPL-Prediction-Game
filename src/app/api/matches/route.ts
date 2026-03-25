@@ -13,11 +13,14 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const filterToday = searchParams.get('today');
+    const getAll = searchParams.get('all') === 'true';
 
-    let query: any = {
-      status: { $in: ['UPCOMING', 'LIVE'] },
-      endTime: { $gt: new Date() }
-    };
+    let query: any = {};
+    
+    if (!getAll) {
+      query.status = { $in: ['UPCOMING', 'LIVE'] };
+      query.endTime = { $gt: new Date() };
+    }
 
     if (filterToday === 'true') {
       const startOfDay = new Date();
@@ -27,10 +30,16 @@ export async function GET(request: NextRequest) {
       query.startTime = { $gte: startOfDay, $lte: endOfDay };
     }
 
+    console.log('[DEBUG] GET /api/matches query:', JSON.stringify(query));
+    const allMatches = await Match.find({});
+    console.log('[DEBUG] GET /api/matches ALL matches count:', allMatches.length);
+
     const matches = await Match.find(query)
       .populate('teamA')
       .populate('teamB')
       .sort({ startTime: 1 });
+
+    console.log('[DEBUG] GET /api/matches returned:', matches.length);
 
     // Compute isLocked for each match (30 min rule)
     const now = new Date();
@@ -50,7 +59,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession() as { role?: string; participantId?: string; userId?: string; name?: string } | null;
+    const session = await getSession(request) as { role?: string; participantId?: string; userId?: string; name?: string } | null;
     if (!session || (session.role !== 'ADMIN' && session.role !== 'admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }

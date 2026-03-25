@@ -15,6 +15,7 @@ export default function AdminTeamsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,21 +40,64 @@ export default function AdminTeamsPage() {
     }
   };
 
-  const handleCreateTeam = async (e: React.FormEvent) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image must be less than 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData({ ...formData, logoUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const editTeam = (team: Team) => {
+    setFormData({
+      name: team.name,
+      shortName: team.shortName,
+      logoUrl: team.logoUrl || ""
+    });
+    setEditingTeamId(team._id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
-      const res = await fetch("/api/admin/teams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
+      let res;
+      if (editingTeamId) {
+        res = await fetch(`/api/admin/teams/${editingTeamId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(formData)
+        });
+      } else {
+        res = await fetch("/api/admin/teams", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(formData)
+        });
+      }
+      
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Failed to ${editingTeamId ? 'update' : 'create'} team`);
       
-      if (!res.ok) throw new Error(data.error || "Failed to create team");
+      if (editingTeamId) {
+        setTeams(teams.map(t => t._id === editingTeamId ? data : t));
+        setEditingTeamId(null);
+      } else {
+        setTeams([...teams, data]);
+      }
       
-      setTeams([...teams, data]);
       setFormData({ name: "", shortName: "", logoUrl: "" });
     } catch (err: any) {
       setError(err.message);
@@ -63,9 +107,12 @@ export default function AdminTeamsPage() {
   const handleDeleteTeam = async (id: string) => {
     if (!confirm("Are you sure you want to delete this team? It might break existing matches.")) return;
     setIsDeleting(id);
-    
+
     try {
-      const res = await fetch(`/api/admin/teams/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/teams/${id}`, { 
+        method: "DELETE",
+        credentials: "include"
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to delete team");
@@ -86,9 +133,24 @@ export default function AdminTeamsPage() {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-        <h2 className="text-xl font-bold text-[#001f3f] mb-6 flex items-center">
-          <Plus className="mr-2" size={24} /> Add New Team
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-[#001f3f] flex items-center">
+            {editingTeamId ? <Edit className="mr-2" size={24} /> : <Plus className="mr-2" size={24} />}
+            {editingTeamId ? "Edit Team Details" : "Add New Team"}
+          </h2>
+          {editingTeamId && (
+            <button 
+              type="button" 
+              onClick={() => {
+                setEditingTeamId(null);
+                setFormData({ name: "", shortName: "", logoUrl: "" });
+              }}
+              className="text-sm font-bold text-slate-400 hover:text-slate-600 underline transition"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
 
         {error && (
           <div className="mb-6 p-4 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-bold">
@@ -96,46 +158,50 @@ export default function AdminTeamsPage() {
           </div>
         )}
 
-        <form onSubmit={handleCreateTeam} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-          <div>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+          <div className="md:col-span-1">
             <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Team Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-              placeholder="e.g. Royal Challengers Bangalore"
+              className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              placeholder="e.g. Mumbai Indians"
               required
             />
           </div>
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Short Name</label>
             <input
               type="text"
               value={formData.shortName}
               onChange={e => setFormData({ ...formData, shortName: e.target.value.toUpperCase() })}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-              placeholder="e.g. RCB"
+              className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              placeholder="e.g. MI"
               maxLength={4}
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Logo URL</label>
-            <input
-              type="url"
-              value={formData.logoUrl}
-              onChange={e => setFormData({ ...formData, logoUrl: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-              placeholder="https://example.com/logo.png"
-            />
+          <div className="md:col-span-2">
+            <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Upload Team Logo (PNG/JPG)</label>
+            <div className="flex items-center space-x-4">
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/webp, image/avif"
+                onChange={handleImageUpload}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 focus:outline-none"
+              />
+              {formData.logoUrl && (
+                <img src={formData.logoUrl} alt="Preview" className="h-12 w-12 rounded bg-slate-100 object-contain p-1 border border-slate-200" />
+              )}
+            </div>
           </div>
           <div className="md:col-span-3">
             <button
               type="submit"
-              className="w-full bg-[#001f3f] text-white font-bold py-3.5 rounded-xl hover:bg-blue-900 transition-all shadow-lg"
+              className={`w-full text-white font-bold py-3.5 rounded-xl transition-all shadow-lg ${editingTeamId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#001f3f] hover:bg-blue-900'}`}
             >
-              Create Team
+              {editingTeamId ? "Save Updates" : "Create Team"}
             </button>
           </div>
         </form>
@@ -145,7 +211,7 @@ export default function AdminTeamsPage() {
         <div className="p-8 border-b border-slate-100">
           <h2 className="text-xl font-bold text-[#001f3f]">Team Roster</h2>
         </div>
-        
+
         {loading ? (
           <div className="p-8 text-center text-slate-500 font-bold">Loading Teams...</div>
         ) : teams.length === 0 ? (
@@ -178,11 +244,19 @@ export default function AdminTeamsPage() {
                     <td className="px-6 py-4">
                       <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">{team.shortName}</span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 flex items-center justify-end">
+                      <button
+                        onClick={() => editTeam(team)}
+                        className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"
+                        title="Edit Team"
+                      >
+                        <Edit size={20} />
+                      </button>
                       <button
                         onClick={() => handleDeleteTeam(team._id)}
                         disabled={isDeleting === team._id}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-50"
+                        title="Delete Team"
                       >
                         <Trash2 size={20} />
                       </button>

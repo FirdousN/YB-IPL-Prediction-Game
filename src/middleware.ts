@@ -13,6 +13,7 @@ export async function middleware(request: NextRequest) {
     // Check for session
     const cookie = request.cookies.get('session')?.value;
     const session = cookie ? await verifyToken(cookie) : null;
+    console.log(`[MIDDLEWARE] ${request.method} ${path} -> cookie: ${!!cookie}, session: ${session ? session.role : 'null'}`);
 
     // 1. Admin Route Protection
     if (isProtectedAdmin) {

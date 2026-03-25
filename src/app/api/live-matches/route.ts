@@ -15,6 +15,15 @@ export async function GET() {
        throw new Error('Failed to fetch live scores');
     }
     const data = await res.json();
+    
+    // Filter to only include IPL matches
+    if (data && data.data) {
+      data.data = data.data.filter((match: any) => {
+        const seriesName = match.series ? match.series.toLowerCase() : "";
+        return seriesName.includes("premier") || seriesName.includes("ipl");
+      });
+    }
+
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

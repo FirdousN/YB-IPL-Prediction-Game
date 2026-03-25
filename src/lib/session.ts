@@ -15,17 +15,26 @@ export async function setSessionCookie(token: string) {
     });
 }
 
+import { NextRequest } from 'next/server';
+
 /**
  * Get current session from cookies
  * Safe for Server Components and Route Handlers
  */
-export async function getSession(): Promise<JWTPayload | null> {
+export async function getSession(request?: NextRequest): Promise<JWTPayload | null> {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get('session')?.value;
+        let token;
+        if (request) {
+            token = request.cookies.get('session')?.value;
+        } else {
+            const cookieStore = await cookies();
+            token = cookieStore.get('session')?.value;
+        }
+        
         if (!token) return null;
         return await verifyToken(token);
     } catch (error) {
+        console.error('[DEBUG] getSession error:', error);
         return null; // cookies() might throw if called outside of request context
     }
 }
