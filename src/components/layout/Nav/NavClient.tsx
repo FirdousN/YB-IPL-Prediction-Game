@@ -1,9 +1,8 @@
-// /src/components/layout/Nav/NavClient.tsx
-
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import ThemeToggle from "../../ThemeToggle";
 
 interface UserSession {
     name: string;
@@ -41,7 +40,6 @@ export default function NavClient() {
         fetchSession();
     }, []);
 
-    // Logout handler (better than cookie hack)
     const handleLogout = async () => {
         try {
             await fetch("/api/auth/logout", {
@@ -57,51 +55,60 @@ export default function NavClient() {
     };
 
     return (
-        <nav className="fixed top-0 w-full z-50 bg-gray-900/40 backdrop-blur-md border-b border-gray-800">
-            <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center w-full py-3">
+        <nav className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/40 backdrop-blur-xl border-b border-border transition-all duration-500">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center w-full py-4">
 
-                    {/* Logo */}
-                    <Link
-                        href="/"
-                        className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500"
-                    >
-                        <img
-                            src="/yb-ipl-logo.png"
-                            alt="Yes Bharath"
-                            className="h-10 md:h-10 lg:h-12 xl:h-16 w-auto"
-                        />
-                    </Link>
+                    {/* Left: Logo & Links */}
+                    <div className="flex items-center gap-10">
+                        <Link href="/" className="shrink-0 group">
+                            <img
+                                src="/yb-ipl-logo.png"
+                                alt="Yes Bharath"
+                                className="h-10 md:h-12 w-auto drop-shadow-sm group-hover:scale-110 transition-transform duration-500"
+                            />
+                        </Link>
 
-                    {/* Center Navigation Links */}
-                    <div className="hidden lg:flex items-center space-x-8 text-sm font-black tracking-widest text-gray-300 uppercase">
-                        <Link href="/site/fixtures" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Fixtures & Results</Link>
-                        <Link href="/site/points-table" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Points Table</Link>
-                        <Link href="/site/stats" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">Overall Stats</Link>
-                        <Link href="/site/teams" className="hover:text-white hover:text-shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all">All Teams</Link>
+                        <div className="hidden lg:flex items-center space-x-8 text-[10px] font-black tracking-[0.2em] text-text-primary uppercase">
+                            <Link href="/site/fixtures" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">Fixtures & Results</Link>
+                            <Link href="/site/points-table" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">Points Table</Link>
+                            <Link href="/site/stats" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">Overall Stats</Link>
+                            <Link href="/site/teams" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">All Teams</Link>
+                        </div>
                     </div>
 
-                    {/* Right Side */}
+                    {/* Right: Theme & User */}
                     <div className="flex items-center space-x-6">
+                        <ThemeToggle />
+
+                        <div className="h-6 w-px bg-border hidden sm:block"></div>
+
+                        {/* Highlighted Start Prediction Button */}
+                        <Link 
+                            href="/site/matches"
+                            className="hidden md:flex bg-accent text-white font-black text-[10px] uppercase tracking-[0.2em] px-6 py-2.5 rounded-xl shadow-lg shadow-accent/20 hover:scale-105 hover:bg-accent-hover transition-all active:scale-95 border border-white/10"
+                        >
+                            Start Prediction
+                        </Link>
 
                         {loading ? (
-                            <div className="text-gray-400 text-sm">Loading...</div>
+                            <div className="w-10 h-10 rounded-full border-2 border-border border-t-accent animate-spin"></div>
                         ) : user ? (
                             <div className="relative">
-
-                                {/* User Button */}
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                                    className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full backdrop-blur-md transition border border-white/10"
+                                    className="flex items-center space-x-3 bg-surface border border-border px-5 py-2.5 rounded-2xl shadow-sm hover:shadow-md hover:border-accent transition-all group"
                                 >
-                                    <span className="font-semibold text-blue-300">
-                                        {user.name}
+                                    <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent ring-2 ring-accent/5">
+                                         <span className="text-[10px] font-black uppercase">{user?.name?.charAt(0) || 'U'}</span>
+                                    </div>
+                                    <span className="font-black text-[11px] text-text-primary uppercase tracking-tighter">
+                                        {user?.name?.split(' ')[0] || 'User'}
                                     </span>
 
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? "rotate-180" : ""
-                                            }`}
+                                        className={`h-4 w-4 text-text-secondary transition-transform duration-300 ${dropdownOpen ? "rotate-180" : ""}`}
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -109,67 +116,61 @@ export default function NavClient() {
                                         <path
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
-                                            strokeWidth={2}
+                                            strokeWidth={3}
                                             d="M19 9l-7 7-7-7"
                                         />
                                     </svg>
                                 </button>
 
-                                {/* Dropdown */}
                                 {dropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-
-                                        {/* User Info */}
-                                        <div className="px-4 py-3 border-b border-gray-800">
-                                            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">
-                                                Signed in as
-                                            </p>
-                                            <p className="text-white font-bold truncate">
-                                                {user.name}
-                                            </p>
+                                    <div className="absolute right-0 mt-3 w-64 bg-surface border border-border rounded-[1.5rem] shadow-2xl py-3 overflow-hidden animate-in fade-in zoom-in-95 duration-300 origin-top-right z-[60]">
+                                        <div className="px-5 py-4 border-b border-border bg-surface-hover/30">
+                                            <p className="text-[9px] text-text-secondary uppercase font-black tracking-widest opacity-40 mb-1">Authenticated Account</p>
+                                            <p className="text-text-primary font-black text-sm truncate uppercase tracking-tight">{user.name}</p>
+                                            <p className="text-[9px] text-accent font-black uppercase mt-1 tracking-tighter italic">{user.role}</p>
                                         </div>
 
-                                        {/* Links */}
-                                        <Link
-                                            href="/site/profile"
-                                            className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition"
-                                        >
-                                            Profile
-                                        </Link>
+                                        <div className="px-2 py-2 space-y-1">
+                                            <Link
+                                                href="/site/profile"
+                                                onClick={() => setDropdownOpen(false)}
+                                                className="flex items-center px-4 py-3 text-[11px] font-black text-text-primary hover:bg-surface-hover rounded-xl transition uppercase tracking-tighter"
+                                            >
+                                                My Profile Settings
+                                            </Link>
+                                            <Link
+                                                href="/site/matches?tab=MY_PICKS"
+                                                onClick={() => setDropdownOpen(false)}
+                                                className="flex items-center px-4 py-3 text-[11px] font-black text-text-primary hover:bg-surface-hover rounded-xl transition uppercase tracking-tighter"
+                                            >
+                                                My Prediction History
+                                            </Link>
+                                            <Link
+                                                href="/site/matches"
+                                                onClick={() => setDropdownOpen(false)}
+                                                className="flex items-center px-4 py-3 text-[11px] font-black text-text-primary hover:bg-surface-hover rounded-xl transition uppercase tracking-tighter"
+                                            >
+                                                Available Matches
+                                            </Link>
+                                        </div>
 
-                                        <Link
-                                            href="/site/matches?tab=MY_PICKS"
-                                            className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition"
-                                        >
-                                            My Picks / History
-                                        </Link>
-
-                                        <Link
-                                            href="/site/matches"
-                                            className="block px-4 py-2 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition"
-                                        >
-                                            Matches
-                                        </Link>
-
-                                        {/* Logout */}
-                                        <div className="border-t border-gray-800 mt-2 pt-2">
+                                        <div className="px-2 pt-2 border-t border-border mt-2">
                                             <button
                                                 onClick={handleLogout}
-                                                className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition"
+                                                className="flex w-full items-center px-4 py-3 text-[11px] font-black text-error hover:bg-error/5 rounded-xl transition uppercase tracking-widest"
                                             >
-                                                Sign Out
+                                                Secure Exit
                                             </button>
                                         </div>
                                     </div>
                                 )}
-
                             </div>
                         ) : (
                             <Link
                                 href="/login"
-                                className="px-6 py-2 border border-blue-400 text-blue-400 font-bold rounded-full hover:bg-blue-400 hover:text-black transition shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                                className="px-8 py-2.5 bg-accent hover:bg-accent-hover text-white font-black rounded-2xl transition shadow-lg shadow-accent/20 text-[11px] uppercase tracking-widest active:scale-95"
                             >
-                                Login
+                                Get Started
                             </Link>
                         )}
 

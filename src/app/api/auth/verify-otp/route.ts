@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
                 name: user.name,
                 role: user.role,
             },
-            redirectTo: user.role === 'admin' ? '/admin/dashboard' : '/dashboard'
+            redirectTo: user.role === 'admin' ? '/admin' : '/site/matches'
         });
 
         // Set Cookie using our utility

@@ -12,26 +12,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  /* Session Check */
-  useEffect(() => {
-    fetch('/api/auth/session')
-      .then(res => {
-        if (res.ok) {
-          return res.json();
-        }
-        return null;
-      })
-      .then(data => {
-        if (data && data.authenticated) {
-          if (data.user.role === 'admin') {
-            router.replace('/admin/dashboard');
-          } else {
-            router.replace('/dashboard');
-          }
-        }
-      })
-      .catch(() => { }); // Ignore errors
-  }, [router]);
+  // Redundant session check removed to prevent flickering. 
+  // Middleware (src/middleware.ts) handles redirection if already logged in.
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,11 +67,11 @@ export default function LoginPage() {
       if (res.ok) {
         // Use redirectTo from response or default
         if (data.redirectTo) {
-          router.push(data.redirectTo);
+          window.location.href = data.redirectTo;
         } else if (data.user.role === 'admin') {
-          router.push("/admin/dashboard");
+          window.location.href = "/admin";
         } else {
-          router.push("/dashboard");
+          window.location.href = "/site/fixtures"; // Redirect correctly to matches list
         }
       } else {
         setError(data.error || "Verification failed");

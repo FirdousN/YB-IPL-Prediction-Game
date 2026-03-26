@@ -40,8 +40,8 @@ export default function LeaderboardPage() {
         <div className="overflow-x-auto">
           {users.length === 0 ? (
             <div className="text-center py-20">
-               <p className="text-gray-500 font-bold uppercase tracking-widest">No Predictions Yet</p>
-               <p className="text-xs text-gray-600 mt-2 uppercase tracking-tighter">Ranking will start once IPL 2026 begins</p>
+              <p className="text-gray-500 font-bold uppercase tracking-widest">No Predictions Yet</p>
+              <p className="text-xs text-gray-600 mt-2 uppercase tracking-tighter">Ranking will start once IPL 2026 begins</p>
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -56,10 +56,10 @@ export default function LeaderboardPage() {
                 {users.map((u, i) => (
                   <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition duration-150">
                     <td className="p-4 text-center font-black text-gray-400 dark:text-gray-600">
-                      {i === 0 ? <span className="text-yellow-500 text-xl">🥇</span> : 
-                       i === 1 ? <span className="text-gray-400 text-xl">🥈</span> : 
-                       i === 2 ? <span className="text-amber-600 text-xl">🥉</span> : 
-                       `#${i + 1}`}
+                      {i === 0 ? <span className="text-yellow-500 text-xl">🥇</span> :
+                        i === 1 ? <span className="text-gray-400 text-xl">🥈</span> :
+                          i === 2 ? <span className="text-amber-600 text-xl">🥉</span> :
+                            `#${i + 1}`}
                     </td>
                     <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center space-x-3">

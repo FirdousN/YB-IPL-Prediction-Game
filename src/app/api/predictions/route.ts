@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || !session.userId || !/^[0-9a-fA-F]{24}$/.test(session.userId)) {
+      return NextResponse.json({ error: 'Unauthorized: Valid session required' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
 
     // Check Lock
     const now = new Date();
-    // 30 minutes = 30 * 60 * 1000 ms
-    const lockTime = new Date(match.startTime.getTime() - 30 * 60 * 1000);
+    // 1 minute = 60 * 1000 ms
+    const lockTime = new Date(match.startTime.getTime() - 60 * 1000);
 
     if (now > lockTime) {
       return NextResponse.json({ error: 'Predictions related to this match are now closed.' }, { status: 403 });
@@ -57,14 +57,30 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const session = await getSession(request);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || !session.userId || !/^[0-9a-fA-F]{24}$/.test(session.userId)) {
+      return NextResponse.json({ error: 'Unauthorized: Valid session required' }, { status: 401 });
     }
 
     // Get all predictions for this user
-    const predictions = await Prediction.find({ userId: session.userId }).populate('matchId');
+    console.log('[DEBUG] GET /api/predictions for user:', session.userId);
+    const predictions = await Prediction.find({ userId: session.userId })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'matchId',
+        populate: [
+          { path: 'teamA' },
+          { path: 'teamB' },
+          { path: 'winner' }
+        ]
+      });
+    
+    console.log('[DEBUG] GET /api/predictions result count:', predictions.length);
     return NextResponse.json(predictions);
   } catch (error: unknown) {
-    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("Cast to ObjectId failed")) {
+       return NextResponse.json({ error: 'Invalid Session' }, { status: 401 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Settings2, Trash2, List, Filter, ArrowLeft, DownloadCloud, X } from "lucide-react";
+import { Plus, Settings2, Trash2, List, Filter, ArrowLeft, DownloadCloud, X, Users, Search, Trophy, LayoutDashboard } from "lucide-react";
+import PlayerSearchSelect from "@/src/components/PlayerSearchSelect";
 import Link from "next/link";
 
 interface Team {
@@ -24,6 +25,7 @@ interface Match {
   teamAScore?: { r: number; w: number; o: string };
   teamBScore?: { r: number; w: number; o: string };
   questions?: any[];
+  players?: string[];
 }
 
 interface QuestionForm {
@@ -59,7 +61,7 @@ export default function AdminMatchesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"ALL" | "UPCOMING" | "LIVE" | "COMPLETED">("ALL");
-  
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showFixturesModal, setShowFixturesModal] = useState(false);
   const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
@@ -122,7 +124,7 @@ export default function AdminMatchesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.data && Array.isArray(data.data)) {
-           setFixtures(data.data.filter((f: any) => f.matchType !== 'test')); // Filter out Test matches for cleaner lists initially if preferred, but we show all for now
+          setFixtures(data.data.filter((f: any) => f.matchType !== 'test')); 
         }
       } else {
         const errData = await res.json();
@@ -148,14 +150,14 @@ export default function AdminMatchesPage() {
   const updateQ1 = (effectiveTeamAId: string, effectiveTeamBId: string) => {
     setTimeout(() => {
       setQuestions(prevQ => {
-         const newQ = [...prevQ];
-         const q1Index = newQ.findIndex(q => q.id === "q1");
-         if (q1Index !== -1 && newQ[q1Index].type === "OPTIONS") {
-            const teamAObj = teams.find(t => t._id === effectiveTeamAId);
-            const teamBObj = teams.find(t => t._id === effectiveTeamBId);
-            newQ[q1Index].options = [teamAObj?.name || "", teamBObj?.name || ""].filter(Boolean);
-         }
-         return newQ;
+        const newQ = [...prevQ];
+        const q1Index = newQ.findIndex(q => q.id === "q1");
+        if (q1Index !== -1 && newQ[q1Index].type === "OPTIONS") {
+          const teamAObj = teams.find(t => t._id === effectiveTeamAId);
+          const teamBObj = teams.find(t => t._id === effectiveTeamBId);
+          newQ[q1Index].options = [teamAObj?.name || "", teamBObj?.name || ""].filter(Boolean);
+        }
+        return newQ;
       });
     }, 0);
   };
@@ -174,509 +176,504 @@ export default function AdminMatchesPage() {
   };
 
   const applyFixture = (fixture: ApiFixture) => {
-     try {
-       // Format dates for datetime-local (YYYY-MM-DDTHH:mm)
-       const start = new Date(fixture.dateTimeGMT || fixture.date);
-       const startLocal = new Date(start.getTime() - start.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-       
-       // Default end time to 4 hours later
-       const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
-       const endLocal = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    try {
+      const start = new Date(fixture.dateTimeGMT || fixture.date);
+      const startLocal = new Date(start.getTime() - start.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+      const endLocal = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-       let matchedTeamAId = "";
-       let matchedTeamBId = "";
+      let matchedTeamAId = "";
+      let matchedTeamBId = "";
 
-       // Attempt auto-matching Team IDs from the DB using names or shortnames
-       if (fixture.teamInfo && fixture.teamInfo.length >= 2) {
-          const apiTeamAInfo = fixture.teamInfo[0];
-          const apiTeamBInfo = fixture.teamInfo[1];
-          
-          const dbTeamA = teams.find(t => 
-             t.name.toLowerCase() === apiTeamAInfo.name.toLowerCase() || 
-             t.shortName.toLowerCase() === apiTeamAInfo.shortname.toLowerCase()
-          );
-          if (dbTeamA) matchedTeamAId = dbTeamA._id;
+      if (fixture.teamInfo && fixture.teamInfo.length >= 2) {
+        const apiTeamAInfo = fixture.teamInfo[0];
+        const apiTeamBInfo = fixture.teamInfo[1];
+        const dbTeamA = teams.find(t => t.name.toLowerCase() === apiTeamAInfo.name.toLowerCase() || t.shortName.toLowerCase() === apiTeamAInfo.shortname.toLowerCase());
+        if (dbTeamA) matchedTeamAId = dbTeamA._id;
+        const dbTeamB = teams.find(t => t.name.toLowerCase() === apiTeamBInfo.name.toLowerCase() || t.shortName.toLowerCase() === apiTeamBInfo.shortname.toLowerCase());
+        if (dbTeamB) matchedTeamBId = dbTeamB._id;
+      } else if (fixture.teams && fixture.teams.length >= 2) {
+        const apiTeamA = fixture.teams[0];
+        const apiTeamB = fixture.teams[1];
+        const dbTeamA = teams.find(t => t.name.toLowerCase().includes(apiTeamA.toLowerCase()) || apiTeamA.toLowerCase().includes(t.name.toLowerCase()));
+        if (dbTeamA) matchedTeamAId = dbTeamA._id;
+        const dbTeamB = teams.find(t => t.name.toLowerCase().includes(apiTeamB.toLowerCase()) || apiTeamB.toLowerCase().includes(t.name.toLowerCase()));
+        if (dbTeamB) matchedTeamBId = dbTeamB._id;
+      }
 
-          const dbTeamB = teams.find(t => 
-             t.name.toLowerCase() === apiTeamBInfo.name.toLowerCase() || 
-             t.shortName.toLowerCase() === apiTeamBInfo.shortname.toLowerCase()
-          );
-          if (dbTeamB) matchedTeamBId = dbTeamB._id;
-       } else if (fixture.teams && fixture.teams.length >= 2) {
-          const apiTeamA = fixture.teams[0];
-          const apiTeamB = fixture.teams[1];
-          
-          const dbTeamA = teams.find(t => t.name.toLowerCase().includes(apiTeamA.toLowerCase()) || apiTeamA.toLowerCase().includes(t.name.toLowerCase()));
-          if (dbTeamA) matchedTeamAId = dbTeamA._id;
+      setFormData({
+        teamA: matchedTeamAId, teamB: matchedTeamBId, startTime: startLocal, endTime: endLocal, venue: fixture.venue || "",
+        group: fixture.matchType ? fixture.matchType.toUpperCase() + " SET" : "Cricket Series",
+        status: "UPCOMING", result: "", winner: "", teamAScore: { r: 0, w: 0, o: "" }, teamBScore: { r: 0, w: 0, o: "" }
+      });
 
-          const dbTeamB = teams.find(t => t.name.toLowerCase().includes(apiTeamB.toLowerCase()) || apiTeamB.toLowerCase().includes(t.name.toLowerCase()));
-          if (dbTeamB) matchedTeamBId = dbTeamB._id;
-       }
-
-       setFormData({
-         teamA: matchedTeamAId,
-         teamB: matchedTeamBId,
-         startTime: startLocal,
-         endTime: endLocal,
-         venue: fixture.venue || "",
-         group: fixture.matchType ? fixture.matchType.toUpperCase() + " SET" : "Cricket Series",
-         status: "UPCOMING",
-         result: "",
-         winner: "",
-         teamAScore: { r: 0, w: 0, o: "" },
-         teamBScore: { r: 0, w: 0, o: "" }
-       });
-
-       updateQ1(matchedTeamAId, matchedTeamBId);
-       setShowFixturesModal(false);
-     } catch (err) {
-       console.error("Fixture parsing failed:", err);
-       alert("Could not parse fixture properly. Please fill details manually.");
-     }
+      updateQ1(matchedTeamAId, matchedTeamBId);
+      setShowFixturesModal(false);
+    } catch (err) { alert("Could not parse fixture properly."); }
   };
 
   const editMatch = (match: Match) => {
-     setFormData({
-       teamA: match.teamA._id,
-       teamB: match.teamB._id,
-       startTime: new Date(new Date(match.startTime).getTime() - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
-       endTime: new Date(new Date(match.startTime).getTime() + 4 * 60 * 60 * 1000 - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
-        venue: match.venue || "",
-        group: match.group || "",
-        status: match.status || "UPCOMING",
-        result: match.result || "",
-        winner: match.winner || "",
-        teamAScore: match.teamAScore || { r: 0, w: 0, o: "" },
-        teamBScore: match.teamBScore || { r: 0, w: 0, o: "" }
-      });
-     
-     if (match.questions && match.questions.length > 0) {
-        setQuestions(match.questions.map(q => ({
-           id: q._id || `custom_${Date.now()}_${Math.random()}`,
-           text: q.text,
-           type: q.type,
-           options: q.options || []
-        })));
-     } else {
-        setQuestions([...DEFAULT_QUESTIONS]);
-        // Update Options dynamically based on teams
-        updateQ1(match.teamA._id, match.teamB._id);
-     }
-     setEditingMatchId(match._id);
-     setShowCreateForm(true);
+    setFormData({
+      teamA: match.teamA._id, teamB: match.teamB._id,
+      startTime: new Date(new Date(match.startTime).getTime() - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+      endTime: new Date(new Date(match.startTime).getTime() + 4 * 60 * 60 * 1000 - new Date(match.startTime).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+      venue: match.venue || "", group: match.group || "", status: match.status || "UPCOMING", result: match.result || "", winner: match.winner || "",
+      teamAScore: match.teamAScore || { r: 0, w: 0, o: "" }, teamBScore: match.teamBScore || { r: 0, w: 0, o: "" }
+    });
+
+    if (match.questions && match.questions.length > 0) {
+      setQuestions(match.questions.map(q => ({ id: q._id || `custom_${Date.now()}_${Math.random()}`, text: q.text, type: q.type, options: q.options || [] })));
+    } else {
+      setQuestions([...DEFAULT_QUESTIONS]);
+      updateQ1(match.teamA._id, match.teamB._id);
+    }
+    setEditingMatchId(match._id);
+    setShowCreateForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
     try {
-      if (!formData.teamA || !formData.teamB || !formData.startTime || !formData.endTime) {
-        throw new Error("Please fill all required fields, including Teams and Dates.");
-      }
-      if (formData.teamA === formData.teamB) {
-        throw new Error("Team A and Team B cannot be the same.");
-      }
-      if (questions.length === 0) {
-        throw new Error("You must include at least 1 prediction question.");
-      }
+      if (!formData.teamA || !formData.teamB || !formData.startTime || !formData.endTime) throw new Error("Please fill all required fields.");
+      if (formData.teamA === formData.teamB) throw new Error("Team A and Team B cannot be the same.");
+      if (questions.length === 0) throw new Error("You must include at least 1 prediction question.");
 
-      const cleanedQuestions = questions.map(q => ({
-        ...q,
-        options: q.type === "OPTIONS" ? q.options.filter(opt => opt.trim() !== "") : []
-      }));
-
+      const cleanedQuestions = questions.map(q => ({ ...q, options: q.type === "OPTIONS" ? q.options.filter(opt => opt.trim() !== "") : [] }));
       const submitData = { ...formData, questions: cleanedQuestions };
 
       let res;
       if (editingMatchId) {
-         res = await fetch(`/api/admin/matches/${editingMatchId}`, {
-           method: "PUT",
-           headers: { "Content-Type": "application/json" },
-           credentials: "include",
-           body: JSON.stringify(submitData),
-         });
+        res = await fetch(`/api/admin/matches/${editingMatchId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(submitData) });
       } else {
-         res = await fetch("/api/matches", {
-           method: "POST",
-           headers: { "Content-Type": "application/json" },
-           credentials: "include",
-           body: JSON.stringify(submitData),
-         });
+        res = await fetch("/api/matches", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(submitData) });
       }
 
       if (res.ok) {
         alert(`Match ${editingMatchId ? 'Updated' : 'Created'} Successfully!`);
-        setFormData({ 
-          teamA: "", teamB: "", startTime: "", endTime: "", venue: "", group: "",
-          status: "UPCOMING", result: "", winner: "",
-          teamAScore: { r: 0, w: 0, o: "" },
-          teamBScore: { r: 0, w: 0, o: "" }
-        });
-        setQuestions([...DEFAULT_QUESTIONS]);
-        setEditingMatchId(null);
         setShowCreateForm(false);
         fetchMatches();
       } else {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create match");
+        throw new Error(data.error || "Failed to save match");
       }
-    } catch (err: any) {
-      setError(err.message);
-    }
+    } catch (err: any) { setError(err.message); }
   };
 
   const deleteMatch = async (id: string) => {
-     alert("Archive/Delete functionality pending endpoint build.");
+     if (!confirm("Are you sure you want to delete this match?")) return;
+     try {
+        const res = await fetch(`/api/admin/matches/${id}`, { method: "DELETE" });
+        if (res.ok) { alert("Match deleted"); fetchMatches(); }
+        else alert("Failed to delete match");
+     } catch (e) { alert("Delete error"); }
+  };
+
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultFormData, setResultFormData] = useState({
+    id: "", teamAName: "", teamBName: "", teamAId: "", teamBId: "", status: "COMPLETED", winner: "", resultText: "",
+    teamAScore: { r: 0, w: 0, o: "" }, teamBScore: { r: 0, w: 0, o: "" }, questions: [] as any[], players: [] as string[]
+  });
+
+  const openResultModal = (match: Match) => {
+    setResultFormData({
+      id: match._id, teamAName: match.teamA.name, teamBName: match.teamB.name, teamAId: match.teamA._id, teamBId: match.teamB._id,
+      status: match.status, winner: match.winner || "", resultText: match.result || "",
+      teamAScore: match.teamAScore || { r: 0, w: 0, o: "" }, teamBScore: match.teamBScore || { r: 0, w: 0, o: "" },
+      questions: match.questions?.map(q => ({ _id: q._id, text: q.text, result: q.result || "", type: q.type, options: q.options })) || [],
+      players: match.players || []
+    });
+    setShowResultModal(true);
+  };
+
+  const handleResultSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/admin/matches/${resultFormData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: resultFormData.status, winner: resultFormData.winner, result: resultFormData.resultText,
+          teamAScore: resultFormData.teamAScore, teamBScore: resultFormData.teamBScore, questions: resultFormData.questions
+        })
+      });
+      if (res.ok) { alert("Result updated!"); setShowResultModal(false); fetchMatches(); }
+    } catch (e) { alert("Save error"); }
   };
 
   const filteredMatches = filter === "ALL" ? matches : matches.filter(m => m.status === filter);
 
   if (showCreateForm) {
     return (
-      <div className="p-8 max-w-4xl mx-auto bg-gray-50 dark:bg-[#001f3f] min-h-screen text-gray-800 dark:text-gray-200 rounded-xl space-y-8 pb-24 relative">
-        
-        {/* FIXTURE MODAL COMPONENT */}
+      <div className="p-8 max-w-4xl mx-auto bg-background min-h-screen text-text-primary rounded-xl space-y-8 pb-24 relative">
         {showFixturesModal && (
-           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-gray-700">
-                 <div className="p-6 border-b border-slate-200 dark:border-gray-700 flex justify-between items-center bg-slate-50 dark:bg-gray-900">
-                    <div>
-                      <h2 className="text-xl font-bold flex items-center"><DownloadCloud className="mr-2 text-blue-500" /> Live Cricket Fixtures</h2>
-                      <p className="text-xs text-slate-500 font-medium">Powered by API.CricketData.org</p>
-                    </div>
-                    <button onClick={() => setShowFixturesModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-gray-700 rounded-full transition">
-                       <X size={20} />
-                    </button>
-                 </div>
-                 <div className="p-6 overflow-y-auto flex-1 bg-slate-100 dark:bg-gray-800 custom-scrollbar">
-                    {loadingFixtures ? (
-                      <div className="text-center py-12 font-bold text-slate-400">Fetching Network Global Fixtures...</div>
-                    ) : fixtures.length === 0 ? (
-                      <div className="text-center py-12 font-bold text-slate-400">No upcoming matches available.</div>
-                    ) : (
-                      <div className="space-y-3">
-                         {fixtures.map((f) => (
-                           <button 
-                             key={f.id} 
-                             onClick={() => applyFixture(f)}
-                             className="w-full text-left bg-white dark:bg-gray-700 border border-slate-200 dark:border-gray-600 rounded-2xl p-4 hover:border-blue-500 hover:shadow-md transition group"
-                           >
-                              <div className="flex justify-between items-start">
-                                <h3 className="font-extrabold text-[#001f3f] dark:text-gray-100 group-hover:text-blue-600 transition">{f.name}</h3>
-                                <span className="text-[10px] uppercase font-black tracking-widest bg-blue-100 text-blue-600 px-2 py-0.5 rounded">{f.matchType}</span>
-                              </div>
-                              <p className="text-sm font-bold text-slate-500 mt-2 flex items-center">{new Date(f.dateTimeGMT || f.date).toLocaleString()} • {f.venue}</p>
-                           </button>
-                         ))}
-                      </div>
-                    )}
-                 </div>
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div className="bg-surface rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden border border-border">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-surface-hover/30">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center"><DownloadCloud className="mr-2 text-blue-500" /> Live Cricket Fixtures</h2>
+                  <p className="text-xs text-text-secondary font-medium">Powered by API.CricketData.org</p>
+                </div>
+                <button onClick={() => setShowFixturesModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-gray-700 rounded-full transition">
+                  <X size={20} />
+                </button>
               </div>
-           </div>
+              <div className="p-6 overflow-y-auto flex-1 bg-surface-hover/10 custom-scrollbar">
+                {loadingFixtures ? (
+                  <div className="text-center py-12 font-bold text-text-secondary">Fetching Network Global Fixtures...</div>
+                ) : fixtures.length === 0 ? (
+                  <div className="text-center py-12 font-bold text-text-secondary">No upcoming matches available.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {fixtures.map((f) => (
+                      <button key={f.id} onClick={() => applyFixture(f)} className="w-full text-left bg-surface border border-border rounded-2xl p-4 hover:border-accent hover:shadow-md transition group">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-extrabold text-text-primary group-hover:text-accent transition">{f.name}</h3>
+                          <span className="text-[10px] uppercase font-black tracking-widest bg-accent/10 text-accent px-2 py-0.5 rounded">{f.matchType}</span>
+                        </div>
+                        <p className="text-sm font-bold text-text-secondary mt-2 flex items-center">{new Date(f.dateTimeGMT || f.date).toLocaleString()} • {f.venue}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-           <div className="flex items-center space-x-4 w-full md:w-auto">
-              <button title="Go Back" onClick={() => setShowCreateForm(false)} className="p-2 bg-white dark:bg-gray-800 rounded-full shadow hover:bg-slate-100 transition shrink-0">
-                 <ArrowLeft size={24} />
-              </button>
-              <div>
-                <h1 className="text-3xl font-black text-blue-600 tracking-tight">Create Match</h1>
-                <p className="text-slate-500 font-medium text-sm">Configure details manually or import directly from API.</p>
-              </div>
-           </div>
-           
-           <button onClick={loadFixtures} className="bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-bold py-2.5 px-6 rounded-xl transition shadow-sm flex items-center w-full md:w-auto justify-center">
-              <DownloadCloud size={18} className="mr-2 fill-current opacity-50" />
-              Fetch Live Fixtures
-           </button>
+          <div className="flex items-center space-x-4 w-full md:w-auto">
+            <button onClick={() => setShowCreateForm(false)} className="p-2 bg-surface rounded-full shadow hover:bg-surface-hover transition shrink-0">
+              <ArrowLeft size={24} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-black text-accent tracking-tight">Create Match</h1>
+              <p className="text-text-secondary font-medium text-sm">Configure details manually or import directly from API.</p>
+            </div>
+          </div>
+          <button onClick={loadFixtures} className="bg-transparent border-2 border-accent text-accent hover:bg-accent hover:text-white font-bold py-2.5 px-6 rounded-xl transition shadow-sm flex items-center w-full md:w-auto justify-center uppercase tracking-widest text-xs">
+            <DownloadCloud size={18} className="mr-2" />
+            Fetch Live Fixtures
+          </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-gray-700">
-           <form onSubmit={handleSubmit} className="space-y-8">
-              
-              <div className="space-y-6">
-                 <h2 className="text-xl font-bold border-b pb-2 dark:border-gray-600">Match Settings</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
-                         Team A
-                         {formData.teamA === "" && <span className="text-red-400 text-[10px]">*Required DB Object</span>}
-                      </label>
-                      <select name="teamA" value={formData.teamA} onChange={handleTeamChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required>
-                        <option value="">Select Team</option>
-                        {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
-                         Team B
-                         {formData.teamB === "" && <span className="text-red-400 text-[10px]">*Required DB Object</span>}
-                      </label>
-                      <select name="teamB" value={formData.teamB} onChange={handleTeamChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required>
-                        <option value="">Select Team</option>
-                        {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Start Time</label>
-                      <input type="datetime-local" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">End Time</label>
-                      <input type="datetime-local" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" required />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Venue</label>
-                      <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Stadium, City" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Tournament</label>
-                      <input type="text" name="group" value={formData.group} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. IPL 2026" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-6 pt-4 border-t dark:border-gray-700">
-                    <h2 className="text-xl font-bold flex items-center text-blue-500">Match Outcome & Scoring</h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Match Status</label>
-                        <select name="status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="w-full p-3 rounded-xl border font-bold dark:bg-gray-700 dark:border-gray-600 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
-                           {["UPCOMING", "LIVE", "COMPLETED", "ABANDONED"].map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Winner Team</label>
-                        <select name="winner" value={formData.winner} onChange={(e) => setFormData({...formData, winner: e.target.value})} className="w-full p-3 rounded-xl border font-bold dark:bg-gray-700 dark:border-gray-600 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
-                           <option value="">Select Winner (If Fin.)</option>
-                           {teams.filter(t => t._id === formData.teamA || t._id === formData.teamB).map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Result Text</label>
-                        <input type="text" name="result" value={formData.result} onChange={handleInputChange} className="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. MI won by 7 wickets" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-100/50 dark:bg-black/20 p-6 rounded-2xl border border-dashed border-slate-300 dark:border-gray-700">
-                       {/* Team A Score */}
-                       <div className="space-y-4">
-                          <h4 className="font-black text-xs uppercase tracking-[0.2em] text-slate-500 flex items-center">
-                             Team A Performance
-                             {formData.teamA && <span className="ml-2 text-blue-500">({teams.find(t => t._id === formData.teamA)?.shortName})</span>}
-                          </h4>
-                          <div className="grid grid-cols-3 gap-2">
-                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Runs</label>
-                                <input type="number" value={formData.teamAScore.r} onChange={(e) => setFormData({...formData, teamAScore: {...formData.teamAScore, r: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
-                             </div>
-                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Wkts</label>
-                                <input type="number" value={formData.teamAScore.w} onChange={(e) => setFormData({...formData, teamAScore: {...formData.teamAScore, w: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
-                             </div>
-                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Overs</label>
-                                <input type="text" value={formData.teamAScore.o} onChange={(e) => setFormData({...formData, teamAScore: {...formData.teamAScore, o: e.target.value}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700" placeholder="e.g. 20.0" />
-                             </div>
-                          </div>
-                       </div>
-                       {/* Team B Score */}
-                       <div className="space-y-4">
-                          <h4 className="font-black text-xs uppercase tracking-[0.2em] text-slate-500 flex items-center">
-                             Team B Performance
-                             {formData.teamB && <span className="ml-2 text-blue-500">({teams.find(t => t._id === formData.teamB)?.shortName})</span>}
-                          </h4>
-                          <div className="grid grid-cols-3 gap-2">
-                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Runs</label>
-                                <input type="number" value={formData.teamBScore.r} onChange={(e) => setFormData({...formData, teamBScore: {...formData.teamBScore, r: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
-                             </div>
-                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Wkts</label>
-                                <input type="number" value={formData.teamBScore.w} onChange={(e) => setFormData({...formData, teamBScore: {...formData.teamBScore, w: parseInt(e.target.value) || 0}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700 font-bold" />
-                             </div>
-                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">Overs</label>
-                                <input type="text" value={formData.teamBScore.o} onChange={(e) => setFormData({...formData, teamBScore: {...formData.teamBScore, o: e.target.value}})} className="w-full p-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700" placeholder="e.g. 19.4" />
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
+        <div className="bg-surface p-8 rounded-3xl shadow-sm border border-border">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold border-b border-border pb-2">Match Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Team A</label>
+                  <select name="teamA" value={formData.teamA} onChange={handleTeamChange} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none" required>
+                    <option value="">Select Team</option>
+                    {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Team B</label>
+                  <select name="teamB" value={formData.teamB} onChange={handleTeamChange} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none" required>
+                    <option value="">Select Team</option>
+                    {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                  </select>
+                </div>
               </div>
-
-              {/* Questions Builder */}
-              <div className="space-y-4">
-                 <div className="flex justify-between items-center border-b pb-2 dark:border-gray-600">
-                    <h2 className="text-xl font-bold">Prediction Form Builder</h2>
-                    <button type="button" onClick={handleAddQuestion} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition border border-blue-200 shadow-sm flex items-center">
-                       <Plus size={16} className="mr-1"/> Add Question
-                    </button>
-                 </div>
-                 
-                 <div className="space-y-4 max-h-[500px] overflow-y-auto overflow-x-hidden pr-2">
-                    {questions.map((q, i) => (
-                      <div key={q.id} className="bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-600 rounded-2xl p-4 relative group">
-                         <div className="flex items-start gap-4">
-                            <div className="font-black text-slate-300 dark:text-slate-600 text-lg mt-1">{i + 1}.</div>
-                            <div className="flex-1 space-y-3">
-                              
-                              <div className="flex flex-col sm:flex-row gap-2">
-                                <input 
-                                   type="text" 
-                                   value={q.text} 
-                                   onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)}
-                                   className="flex-1 p-3 rounded-xl border border-slate-300 dark:bg-gray-800 dark:border-gray-600 font-bold focus:ring-2 focus:ring-blue-500 outline-none" 
-                                   placeholder="Question text (e.g., Who will win?)"
-                                />
-                                <select 
-                                  value={q.type}
-                                  onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value)}
-                                  className="p-3 rounded-xl border border-slate-300 dark:bg-gray-800 dark:border-gray-600 font-bold bg-white text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                                >
-                                  <option value="OPTIONS">Multiple Choice</option>
-                                  <option value="TEXT">Fill-in (Text/Num)</option>
-                                </select>
-                              </div>
-
-                              {q.type === "OPTIONS" && (
-                                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-gray-700">
-                                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Answer Options (Comma Separated)</label>
-                                  <input 
-                                     type="text"
-                                     value={q.options.join(", ")}
-                                     onChange={(e) => handleQuestionChange(q.id, 'options', e.target.value.split(",").map(opt => opt.trimStart()))}
-                                     placeholder="e.g. India, Australia, Over 200"
-                                     className="w-full text-sm font-medium p-2 border-b-2 border-slate-200 dark:border-gray-700 focus:border-blue-500 bg-transparent outline-none transition"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                            <button type="button" onClick={() => handleRemoveQuestion(q.id)} className="text-slate-300 hover:text-red-500 p-2 bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-slate-200 dark:border-gray-700 transition">
-                               <Trash2 size={20} />
-                            </button>
-                         </div>
-                      </div>
-                    ))}
-                    {questions.length === 0 && (
-                      <div className="p-8 text-center text-slate-400 font-bold border-2 border-dashed border-slate-200 rounded-2xl">
-                        No questions added. You must add at least one question.
-                      </div>
-                    )}
-                 </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Start Time</label>
+                  <input type="datetime-local" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">End Time</label>
+                  <input type="datetime-local" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none" required />
+                </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Venue</label>
+                  <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none" placeholder="Stadium, City" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Tournament</label>
+                  <input type="text" name="group" value={formData.group} onChange={handleInputChange} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none" placeholder="e.g. IPL 2026" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Status</label>
+                  <select name="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full p-3 rounded-xl border border-border bg-surface-hover focus:ring-2 focus:ring-accent outline-none">
+                    {["UPCOMING", "LIVE", "COMPLETED", "ABANDONED"].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
 
-              <div className="pt-6 border-t dark:border-gray-700">
-                <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-black py-4 rounded-xl transition shadow-xl shadow-blue-500/20 text-lg">
-                  Deploy Match Configuration
+            <div className="space-y-4">
+              <div className="flex justify-between items-center border-b border-border pb-2">
+                <h2 className="text-xl font-bold">Prediction Form Builder</h2>
+                <button type="button" onClick={handleAddQuestion} className="text-sm font-bold text-accent bg-accent/10 px-4 py-2 rounded-lg transition border border-accent/20 flex items-center">
+                  <Plus size={16} className="mr-1" /> Add Question
                 </button>
-                {error && <div className="p-4 bg-red-100 border border-red-200 text-red-700 rounded-xl mt-4 font-bold text-center">{error}</div>}
               </div>
-           </form>
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                {questions.map((q, i) => (
+                  <div key={q.id} className="bg-surface-hover/10 border border-border rounded-2xl p-4 relative">
+                    <div className="flex items-start gap-4">
+                      <div className="font-black text-text-secondary opacity-20 text-lg mt-1">{i + 1}.</div>
+                      <div className="flex-1 space-y-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input type="text" value={q.text} onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)} className="flex-1 p-3 rounded-xl border border-border bg-surface font-bold focus:ring-2 focus:ring-accent outline-none text-text-primary" placeholder="Question text" />
+                          <select value={q.type} onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value as any)} className="p-3 rounded-xl border border-border bg-surface font-bold text-accent outline-none">
+                            <option value="OPTIONS">Multiple Choice</option>
+                            <option value="TEXT">Fill-in (Text/Num)</option>
+                          </select>
+                        </div>
+                        {q.type === "OPTIONS" && (
+                          <div className="bg-surface p-3 rounded-xl border border-border">
+                            <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Answer Options (Comma Separated)</label>
+                            <input type="text" value={q.options.join(", ")} onChange={(e) => handleQuestionChange(q.id, 'options', e.target.value.split(",").map(opt => opt.trimStart()))} placeholder="e.g. MI, CSK, Over 200" className="w-full text-sm font-medium p-2 border-b border-border bg-transparent outline-none focus:border-accent text-text-primary transition" />
+                          </div>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => handleRemoveQuestion(q.id)} className="text-text-secondary hover:text-error p-2 bg-surface shadow-sm rounded-xl border border-border transition">
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-border">
+              <button type="submit" className="w-full bg-accent hover:bg-accent-hover text-white font-black py-4 rounded-xl transition shadow-xl shadow-accent/20 text-lg uppercase tracking-widest">
+                Deploy Match Configuration
+              </button>
+              {error && <div className="p-4 bg-error/10 border border-error/20 text-error rounded-xl mt-4 font-bold text-center">{error}</div>}
+            </div>
+          </form>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto bg-gray-50 dark:bg-[#001f3f] min-h-screen text-gray-800 dark:text-gray-200 rounded-xl space-y-8">
+    <div className="p-8 max-w-7xl mx-auto bg-background min-h-screen text-text-primary rounded-xl space-y-8 transition-colors duration-500">
       
+      {showResultModal && (
+        <div className="fixed inset-0 z-50 bg-background/60 flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-500">
+          <div className="bg-surface rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-border">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-surface-hover/30">
+              <div>
+                <h2 className="text-xl font-bold flex items-center uppercase tracking-tight text-text-primary"><Trophy className="mr-2 text-amber-500" /> Enter Match Result</h2>
+                <p className="text-xs text-text-secondary font-bold">{resultFormData.teamAName} vs {resultFormData.teamBName}</p>
+              </div>
+              <button onClick={() => setShowResultModal(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-gray-700 rounded-full transition text-text-secondary">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleResultSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-text-secondary mb-2">Status</label>
+                  <select value={resultFormData.status} onChange={(e) => setResultFormData({ ...resultFormData, status: e.target.value })} className="w-full p-4 rounded-2xl border border-border bg-surface text-text-primary font-bold outline-none focus:border-accent">
+                    {["UPCOMING", "LIVE", "COMPLETED", "ABANDONED"].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-text-secondary mb-2">Winner</label>
+                  <select value={resultFormData.winner} onChange={(e) => setResultFormData({ ...resultFormData, winner: e.target.value })} className="w-full p-4 rounded-2xl border border-border bg-surface text-text-primary font-bold outline-none focus:border-accent">
+                    <option value="">No Winner</option>
+                    <option value={resultFormData.teamAId}>{resultFormData.teamAName}</option>
+                    <option value={resultFormData.teamBId}>{resultFormData.teamBName}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-text-secondary mb-2">Result Text</label>
+                <input type="text" value={resultFormData.resultText} onChange={(e) => setResultFormData({ ...resultFormData, resultText: e.target.value })} placeholder="e.g. MI won by 7 wickets" className="w-full p-4 rounded-2xl border border-border bg-surface text-text-primary font-bold focus:border-accent outline-none" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                <div className="bg-surface-hover/40 p-5 rounded-2xl border border-border">
+                  <h4 className="text-[10px] font-black uppercase text-accent mb-4">{resultFormData.teamAName} Score</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Runs</label>
+                      <input type="number" value={resultFormData.teamAScore.r} onChange={(e) => setResultFormData({ ...resultFormData, teamAScore: { ...resultFormData.teamAScore, r: parseInt(e.target.value) || 0 } })} className="w-full p-3 rounded-xl border border-border bg-surface font-bold text-center text-text-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Wkts</label>
+                      <input type="number" value={resultFormData.teamAScore.w} onChange={(e) => setResultFormData({ ...resultFormData, teamAScore: { ...resultFormData.teamAScore, w: parseInt(e.target.value) || 0 } })} className="w-full p-3 rounded-xl border border-border bg-surface font-bold text-center text-text-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Overs</label>
+                      <input type="text" value={resultFormData.teamAScore.o} onChange={(e) => setResultFormData({ ...resultFormData, teamAScore: { ...resultFormData.teamAScore, o: e.target.value } })} placeholder="0.0" className="w-full p-3 rounded-xl border border-border bg-surface font-bold text-center text-text-primary" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-surface-hover/40 p-5 rounded-2xl border border-border">
+                  <h4 className="text-[10px] font-black uppercase text-accent mb-4">{resultFormData.teamBName} Score</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Runs</label>
+                      <input type="number" value={resultFormData.teamBScore.r} onChange={(e) => setResultFormData({ ...resultFormData, teamBScore: { ...resultFormData.teamBScore, r: parseInt(e.target.value) || 0 } })} className="w-full p-3 rounded-xl border border-border bg-surface font-bold text-center text-text-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Wkts</label>
+                      <input type="number" value={resultFormData.teamBScore.w} onChange={(e) => setResultFormData({ ...resultFormData, teamBScore: { ...resultFormData.teamBScore, w: parseInt(e.target.value) || 0 } })} className="w-full p-3 rounded-xl border border-border bg-surface font-bold text-center text-text-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-text-secondary block mb-1">Overs</label>
+                      <input type="text" value={resultFormData.teamBScore.o} onChange={(e) => setResultFormData({ ...resultFormData, teamBScore: { ...resultFormData.teamBScore, o: e.target.value } })} placeholder="0.0" className="w-full p-3 rounded-xl border border-border bg-surface font-bold text-center text-text-primary" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6 pt-4 border-t border-border">
+                <h4 className="text-[10px] font-black uppercase text-accent mb-2">Detailed Question Results</h4>
+                <div className="space-y-4">
+                  {resultFormData.questions.map((q, idx) => {
+                    const t = q.text.toLowerCase();
+                    const isPlayerQ = (t.includes("player") || t.includes("who") || t.includes("man of the match") || t.includes("wicket")) && !t.includes("total") && !t.includes("how many") && !t.includes("win");
+                    const isTeamWinnerQ = t.includes("win") && !t.includes("wicket") && !t.includes("run");
+
+                    return (
+                      <div key={q._id} className="bg-surface-hover/20 p-4 rounded-xl border border-border">
+                        <label className="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">{idx + 1}. {q.text}</label>
+                        {q.type === 'OPTIONS' && q.options && q.options.length > 0 ? (
+                          <PlayerSearchSelect players={q.options} value={q.result} onChange={(val) => { const newQ = [...resultFormData.questions]; newQ[idx].result = val; setResultFormData({...resultFormData, questions: newQ}); }} placeholder="Select winning option..." />
+                        ) : isPlayerQ && resultFormData.players && resultFormData.players.length > 0 ? (
+                          <PlayerSearchSelect players={resultFormData.players} value={q.result} onChange={(val) => { const newQ = [...resultFormData.questions]; newQ[idx].result = val; setResultFormData({...resultFormData, questions: newQ}); }} placeholder="Select valid player..." />
+                        ) : isTeamWinnerQ ? (
+                          <select value={q.result} onChange={(e) => { const newQ = [...resultFormData.questions]; newQ[idx].result = e.target.value; setResultFormData({...resultFormData, questions: newQ}); }} className="w-full p-4 rounded-xl border border-border bg-surface text-text-primary font-bold outline-none focus:border-accent">
+                             <option value="">Select winner team...</option>
+                             <option value={resultFormData.teamAName}>{resultFormData.teamAName}</option>
+                             <option value={resultFormData.teamBName}>{resultFormData.teamBName}</option>
+                          </select>
+                        ) : (
+                          <input type="text" value={q.result} onChange={(e) => { const newQ = [...resultFormData.questions]; newQ[idx].result = e.target.value; setResultFormData({...resultFormData, questions: newQ}); }} placeholder="Enter final correct value..." className="w-full p-4 rounded-xl border border-border bg-surface text-text-primary font-bold" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-6 flex flex-col gap-3">
+                <button type="submit" className="w-full bg-[#001f3f] hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition shadow-xl text-lg uppercase tracking-wider">Save Partial Results</button>
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                     if (!confirm("This will calculate all user points and declare a final match winner. Proceed?")) return;
+                     try {
+                        await fetch(`/api/admin/matches/${resultFormData.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(resultFormData) });
+                        const res = await fetch(`/api/admin/matches/${resultFormData.id}/resolve`, { method: "POST" });
+                        if (res.ok) { alert(`Match Resolved!`); setShowResultModal(false); fetchMatches(); }
+                        else { const data = await res.json(); alert("Error: " + data.error); }
+                     } catch (e) { alert("Resolution failed"); }
+                  }}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-black py-4 rounded-2xl transition shadow-xl text-lg uppercase tracking-wider"
+                >
+                  Calculate & Finalize Scores
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-blue-600 tracking-tight">Match Directory</h1>
-          <p className="text-slate-500 font-medium">Manage existing matches and track incoming predictions.</p>
+          <h1 className="text-3xl font-black text-accent tracking-tight uppercase italic">Match Directory</h1>
+          <p className="text-text-secondary font-bold tracking-tight">Manage existing matches and track incoming predictions.</p>
         </div>
-        <button 
-           onClick={() => setShowCreateForm(true)}
-           className="bg-[#001f3f] hover:bg-blue-900 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg flex items-center"
-        >
-          <Plus size={20} className="mr-2" />
-          Create New Match
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button onClick={async () => {
+            if (!confirm("Delete all test matches?")) return;
+            const res = await fetch("/api/admin/cleanup-dummies", { method: "DELETE" });
+            if (res.ok) { alert("Cleanup finished!"); fetchMatches(); }
+          }} className="bg-error/10 hover:bg-error/20 text-error border border-error/20 font-bold py-3 px-6 rounded-xl transition flex items-center">
+            <Trash2 size={20} className="mr-2" /> Cleanup Test Data
+          </button>
+          <button onClick={async () => {
+            if (!confirm("Sync IPL 2026 fixtures?")) return;
+            const res = await fetch("/api/admin/sync-ipl", { method: "POST" });
+            if (res.ok) { alert("Sync finished!"); fetchMatches(); }
+          }} className="bg-accent hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-xl transition flex items-center">
+            <DownloadCloud size={20} className="mr-2" /> Sync IPL 2026
+          </button>
+          <button onClick={() => setShowCreateForm(true)} className="bg-accent hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-xl transition shadow-lg flex items-center uppercase tracking-widest text-[11px]">
+            <Plus size={20} className="mr-2" /> Create New Match
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-slate-200 p-8 h-full">
-        
+      <div className="bg-surface rounded-3xl shadow-sm border border-border p-8 h-full transition-colors">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-            <h2 className="text-xl font-bold flex items-center">
-               <Settings2 className="mr-2" size={24} /> Existing Matches
-            </h2>
-            
-            <div className="flex bg-slate-100 dark:bg-gray-900 p-1 rounded-xl border border-slate-200 dark:border-gray-700 w-full sm:w-auto overflow-x-auto no-scrollbar">
-               {(["ALL", "UPCOMING", "LIVE", "COMPLETED"] as const).map(f => (
-                 <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition flex-1 sm:flex-none whitespace-nowrap ${filter === f ? "bg-white dark:bg-gray-700 shadow text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
-                 >
-                   {f}
-                 </button>
-               ))}
-            </div>
+          <h2 className="text-xl font-bold flex items-center"><Settings2 className="mr-2 text-accent" size={24} /> Existing Matches</h2>
+          <div className="flex bg-surface-hover/50 p-1 rounded-xl border border-border w-full sm:w-auto overflow-x-auto no-scrollbar">
+            {(["ALL", "UPCOMING", "LIVE", "COMPLETED"] as const).map(f => (
+              <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition flex-1 sm:flex-none whitespace-nowrap ${filter === f ? "bg-surface shadow text-accent" : "text-text-secondary hover:text-text-primary"}`}>
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        
+
         {loading ? (
-          <p className="text-center py-12 text-slate-500 font-bold">Loading match repository...</p>
+          <p className="text-center py-12 text-text-secondary font-bold">Loading match repository...</p>
         ) : filteredMatches.length === 0 ? (
-          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center">
-              <p className="text-slate-500 font-bold text-lg">No matches found.</p>
+          <div className="border-2 border-dashed border-border rounded-2xl p-12 text-center">
+            <p className="text-text-secondary font-bold text-lg">No matches found.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredMatches.map((match) => (
-              <div key={match._id} className="bg-white dark:bg-gray-700 p-6 rounded-2xl border border-slate-200 dark:border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:shadow-lg transition group">
-                
+              <div key={match._id} className="bg-surface-hover/10 p-6 rounded-2xl border border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:shadow-lg transition-all group">
                 <div className="flex items-center space-x-5">
                   {match.teamA?.logoUrl && match.teamB?.logoUrl ? (
-                     <div className="flex -space-x-4 shrink-0">
-                        <img src={match.teamA.logoUrl} className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-md object-contain z-10" alt="A" />
-                        <img src={match.teamB.logoUrl} className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-md object-contain z-0" alt="B" />
-                     </div>
+                    <div className="flex -space-x-4 shrink-0">
+                      <img src={match.teamA.logoUrl} className="w-16 h-16 rounded-full border-4 border-surface bg-surface shadow-md object-contain z-10" alt="A" />
+                      <img src={match.teamB.logoUrl} className="w-16 h-16 rounded-full border-4 border-surface bg-surface shadow-md object-contain z-0" alt="B" />
+                    </div>
                   ) : (
-                     <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center font-bold text-sm text-slate-400 shrink-0 border border-slate-200">VS</div>
+                    <div className="w-16 h-16 rounded-full bg-surface-hover flex items-center justify-center font-bold text-sm text-text-secondary shrink-0 border border-border">VS</div>
                   )}
-                  
                   <div>
-                    <h3 className="font-extrabold text-[#001f3f] dark:text-white text-xl tracking-tight">
-                      {match.teamA?.name || 'Unknown'} <span className="text-slate-400 dark:text-slate-300 italic font-semibold px-1">vs</span> {match.teamB?.name || 'Unknown'}
+                    <h3 className="font-extrabold text-text-primary text-xl tracking-tight uppercase italic">
+                      {match.teamA?.name || 'Unknown'} <span className="text-text-secondary opacity-40 italic font-semibold px-2 tracking-tighter">vs</span> {match.teamB?.name || 'Unknown'}
                     </h3>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1 flex items-center">
+                    <p className="text-sm font-bold text-text-secondary mt-1 flex items-center tracking-tight">
                       {new Date(match.startTime).toLocaleString()}
-                      <span className={`ml-3 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-widest ${match.status === 'LIVE' ? 'bg-red-100 text-red-600 animate-pulse' : match.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {match.status}
+                      <span className={`ml-3 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-widest ${match.status === 'LIVE' ? 'bg-error/10 text-error animate-pulse' : match.status === 'COMPLETED' ? 'bg-success/10 text-success' : 'bg-accent/10 text-accent'}`}>
+                        {match.status}
                       </span>
                     </p>
-                    <p className="text-xs font-semibold text-slate-400 mt-1">{match.venue} • {match.group}</p>
+                    <p className="text-xs font-bold text-text-secondary opacity-40 mt-1 uppercase tracking-widest">{match.venue} • {match.group}</p>
                   </div>
                 </div>
-                
-                <div className="flex w-full md:w-auto space-x-3 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
-                  <button onClick={() => editMatch(match)} className="px-4 py-3 border-2 border-slate-100 text-slate-500 hover:text-blue-500 hover:border-blue-200 rounded-xl hover:bg-blue-50 transition shadow-sm font-bold flex items-center">
-                    <Settings2 size={16} className="mr-2" /> Edit Match
+                <div className="flex w-full md:w-auto space-x-3 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-border flex-wrap gap-y-2">
+                  <button onClick={async () => {
+                    if (!confirm("Fetch real squads?")) return;
+                    const res = await fetch(`/api/admin/matches/${match._id}/players`, { method: 'POST' });
+                    if (res.ok) alert(`Fetched successfully!`);
+                  }} className="px-4 py-3 border border-border text-text-secondary hover:text-accent hover:border-accent rounded-xl hover:bg-surface transition transition shadow-sm font-bold flex items-center">
+                    <Users size={16} className="mr-2" /> Players
                   </button>
-                  <Link href={`/admin/matches/${match._id}`} className="flex-1 md:flex-none text-center px-6 py-3 bg-[#001f3f] hover:bg-blue-900 text-white font-bold text-sm rounded-xl transition flex items-center justify-center shadow-md">
-                     <List size={18} className="mr-2" />
-                     Predictions
-                  </Link>
-                  <button onClick={() => deleteMatch(match._id)} className="px-4 py-3 border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 rounded-xl hover:bg-red-50 transition shadow-sm">
-                    <Trash2 size={20} />
+                  <button onClick={() => editMatch(match)} className="px-4 py-3 border border-border text-text-secondary hover:text-accent hover:border-accent rounded-xl hover:bg-surface transition font-black text-[10px] uppercase tracking-widest flex items-center">
+                    <Settings2 size={16} className="mr-2" /> Edit
                   </button>
+                  <button onClick={() => openResultModal(match)} className="px-4 py-3 border border-border text-text-secondary hover:text-amber-500 hover:border-amber-500 rounded-xl hover:bg-surface transition font-black text-[11px] uppercase tracking-widest flex items-center">
+                    <Trophy size={16} className="mr-2" /> Result
+                  </button>
+                  <Link href={`/admin/matches/${match._id}`} className="px-6 py-3 bg-accent hover:bg-accent-hover text-white font-black text-[11px] uppercase tracking-widest rounded-xl transition flex items-center justify-center shadow-lg shadow-accent/10">Predictions</Link>
+                  <button onClick={() => deleteMatch(match._id)} className="px-3 py-3 border border-border text-text-secondary hover:text-error hover:border-error rounded-xl hover:bg-surface transition shadow-sm"><Trash2 size={20} /></button>
                 </div>
-
               </div>
             ))}
           </div>
         )}
       </div>
-
     </div>
   );
 }

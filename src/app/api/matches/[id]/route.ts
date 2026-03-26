@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const lockTime = new Date(match.startTime.getTime() - 30 * 60000); // 30 mins
     const matchWithLock = {
       ...match.toObject(),
-      isLocked: now > lockTime
+      isLocked: now > lockTime || match.status !== 'UPCOMING'
     };
 
     return NextResponse.json(matchWithLock);

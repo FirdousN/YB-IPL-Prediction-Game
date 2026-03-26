@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
 
     if (username === adminUsername && password === adminPassword) {
       // Create session
-      const token = await signToken({ userId: 'admin', role: 'admin' });
+      // Create session with a valid static ObjectId for admin
+      const token = await signToken({ userId: '000000000000000000000001', role: 'admin' });
       await setSessionCookie(token);
 
       return NextResponse.json({ success: true }, { status: 200 });

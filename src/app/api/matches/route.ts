@@ -3,6 +3,7 @@ import dbConnect from '@/src/lib/db';
 import Match from '@/src/models/Match';
 import Team from '@/src/models/Team'; // Ensure Team is registered for population
 import { getSession } from '@/src/lib/session';
+import { z } from 'zod';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
     let query: any = {};
     
     if (!getAll) {
-      query.status = { $in: ['UPCOMING', 'LIVE'] };
-      query.endTime = { $gt: new Date() };
+      // Allow UPCOMING, LIVE, and COMPLETED by default for the user dashboard
+      query.status = { $in: ['UPCOMING', 'LIVE', 'COMPLETED'] };
     }
 
     if (filterToday === 'true') {
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
     const matches = await Match.find(query)
       .populate('teamA')
       .populate('teamB')
+      .populate('winner')
       .sort({ startTime: 1 });
 
     console.log('[DEBUG] GET /api/matches returned:', matches.length);
@@ -57,6 +59,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
+const matchSchema = z.object({
+  teamA: z.string(),
+  teamB: z.string(),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
+  venue: z.string().optional(),
+  group: z.string().optional(),
+  status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'ABANDONED']).default('UPCOMING'),
+  winner: z.string().optional().transform((val: string | undefined) => val === "" ? undefined : val),
+  questions: z.array(z.any()).optional().default([]),
+});
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession(request) as { role?: string; participantId?: string; userId?: string; name?: string } | null;
@@ -66,17 +80,11 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
     const body = await request.json();
+    const parsed = matchSchema.parse(body);
 
-    if (!body.teamA || !body.teamB || !body.startTime || !body.endTime) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    const match = await Match.create({
-      ...body,
-      questions: body.questions || []
-    });
+    const match = await Match.create(parsed);
     return NextResponse.json(match, { status: 201 });
   } catch (error: unknown) {
-    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) }, { status: 500 });
+    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) }, { status: 400 });
   }
 }

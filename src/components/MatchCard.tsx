@@ -18,18 +18,29 @@ interface MatchProps {
     startTime: string; // ISO string
     status: string;
     isLocked: boolean;
-    questions?: any[]; 
+    questions?: any[];
     matchNumber?: string;
     group?: string;
     venue?: string;
+    winner?: any;
+    result?: string;
+    teamAScore?: { r?: number; w?: number; o?: string };
+    teamBScore?: { r?: number; w?: number; o?: string };
+  };
+  prediction?: {
+    answers: any[];
+    totalPoints?: number;
+    isWinner?: boolean;
+    rank?: number;
   };
 }
 
-export default function MatchCard({ match }: MatchProps) {
+export default function MatchCard({ match, prediction }: MatchProps) {
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
-  
-  const isUpcoming = match.status === "UPCOMING";
-  const isLive = match.status === "LIVE";
+  const isCompleted = match.status?.toUpperCase() === "COMPLETED";
+  const isLiveOrUpcoming = match.status?.toUpperCase() === "LIVE" || match.status?.toUpperCase() === "UPCOMING";
+  const isUpcoming = match.status?.toUpperCase() === "UPCOMING";
+  const isLive = match.status?.toUpperCase() === "LIVE";
   const [startsSoon, setStartsSoon] = useState(false);
 
   useEffect(() => {
@@ -37,13 +48,20 @@ export default function MatchCard({ match }: MatchProps) {
       const now = new Date();
       const startTime = new Date(match.startTime);
       const diff = startTime.getTime() - now.getTime();
+      const oneDay = 24 * 60 * 60 * 1000;
 
       if (diff > 0) {
-        const hours = Math.floor((diff / (1000 * 60 * 60)));
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        setTimeLeft({ hours, minutes, seconds });
-        
+        if (diff > oneDay) {
+          const days = Math.floor(diff / oneDay);
+          const hours = Math.floor((diff % oneDay) / (1000 * 60 * 60));
+          setTimeLeft({ days, hours, minutes: 0, seconds: 0 } as any);
+        } else {
+          const hours = Math.floor((diff / (1000 * 60 * 60)));
+          const minutes = Math.floor((diff / (1000 * 60)) % 60);
+          const seconds = Math.floor((diff / 1000) % 60);
+          setTimeLeft({ hours, minutes, seconds });
+        }
+
         // Check if less than 30 mins
         setStartsSoon(diff < 30 * 60 * 1000);
       } else {
@@ -60,113 +78,169 @@ export default function MatchCard({ match }: MatchProps) {
   const isMatchToday = (isoString: string) => {
     const today = new Date();
     const matchDate = new Date(isoString);
-    return today.getFullYear() === matchDate.getFullYear() && 
-           today.getMonth() === matchDate.getMonth() && 
-           today.getDate() === matchDate.getDate();
+    return today.getFullYear() === matchDate.getFullYear() &&
+      today.getMonth() === matchDate.getMonth() &&
+      today.getDate() === matchDate.getDate();
   };
 
   // Determine Button State
   const renderButton = () => {
-    if (match.isLocked || match.status === "COMPLETED") {
+    if (isCompleted) {
       return (
-        <button disabled className="w-full py-3 bg-gray-700 text-gray-400 font-bold rounded cursor-not-allowed">
-          {match.status === "COMPLETED" ? "Match Ended" : "Predictions Locked"}
-        </button>
+        <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl transition-all shadow-xl shadow-emerald-500/20 uppercase tracking-widest text-[11px] active:scale-95">
+          View Results
+        </Link>
+      );
+    }
+
+    if (match.isLocked) {
+      return (
+        <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 bg-surface-hover hover:bg-surface border border-border text-text-primary font-black rounded-2xl transition-all uppercase tracking-widest text-[10px]">
+          View Your Picks
+        </Link>
       );
     }
 
     if (startsSoon) {
       return (
-        <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded animate-pulse transition shadow-lg">
+        <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl animate-pulse transition-all shadow-xl shadow-amber-500/20 uppercase tracking-widest text-[11px]">
           Closing Soon!
         </Link>
       );
     }
 
     if (isUpcoming) {
-       if (isMatchToday(match.startTime)) {
-         return (
-          <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded transition shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+      if (isMatchToday(match.startTime)) {
+        return (
+          <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 bg-accent hover:bg-accent-hover text-white font-black rounded-2xl transition-all shadow-xl shadow-accent/20 uppercase tracking-widest text-[11px] active:scale-95">
             Predict Now
           </Link>
-         );
-       } else {
-         return (
-          <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 border border-gray-600 hover:bg-gray-800 text-gray-300 font-bold rounded transition">
+        );
+      } else {
+        return (
+          <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 border border-border hover:bg-surface-hover text-text-secondary font-black rounded-2xl transition-all uppercase tracking-widest text-[10px]">
             Opens on Match Day
           </Link>
-         );
-       }
+        );
+      }
     }
-    
+
     // Default fallback
     return (
-        <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded transition">
-          View Match
-        </Link>
+      <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 bg-surface-hover hover:bg-surface border border-border text-text-primary font-black rounded-2xl transition-all uppercase tracking-widest text-[10px]">
+        View Arena
+      </Link>
     );
   };
 
-  const TeamLogo = ({ team }: { team?: Team }) => {
-    if (!team) return <div className="w-16 h-16 mx-auto bg-gray-700 rounded-full mb-2 border border-gray-600"></div>;
+  const TeamLogo = ({ team, isWinner }: { team?: Team; isWinner?: boolean }) => {
+    if (!team) return <div className="w-20 h-20 mx-auto bg-surface-hover rounded-[1.5rem] mb-3 border border-border"></div>;
     return team.logoUrl ? (
-      <img src={team.logoUrl} alt={team.shortName} className="w-16 h-16 mx-auto bg-white rounded-full mb-2 shadow-lg ring-2 ring-blue-500/30 object-contain p-1" />
+      <div className="relative group/logo">
+        <div className={`absolute inset-0 ${isWinner ? 'bg-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]' : 'bg-accent/5'} rounded-full blur-xl scale-75 group-hover/logo:scale-110 transition duration-500`}></div>
+        <img
+          src={team.logoUrl}
+          alt={team.shortName}
+          className={`w-20 h-20 mx-auto bg-white rounded-[1.5rem] mb-3 shadow-sm border ${isWinner ? 'border-emerald-500 border-2' : 'border-border'} relative z-10 object-contain p-4 group-hover/logo:scale-110 transition duration-500`}
+        />
+        {isWinner && (
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-emerald-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap tracking-widest uppercase">
+            WINNER
+          </div>
+        )}
+      </div>
     ) : (
-      <div className="w-16 h-16 mx-auto bg-gray-700 rounded-full flex items-center justify-center mb-2 shadow-lg ring-2 ring-gray-600">
-         <span className="text-xl font-black text-gray-300">{team.shortName}</span>
+      <div className={`w-20 h-20 mx-auto bg-surface-hover rounded-[1.5rem] flex items-center justify-center mb-3 shadow-inner border ${isWinner ? 'border-emerald-500 border-2' : 'border-border'}`}>
+        <span className="text-xl font-black text-text-primary opacity-40 uppercase tracking-tighter">{team.shortName}</span>
       </div>
     );
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-blue-500 hover:shadow-blue-900/20 transition-all duration-300 border-t-2 border-t-blue-500/30">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-blue-500/20 transition"></div>
+    <div className="bg-surface border border-border rounded-[2.5rem] p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500">
+      <div className="absolute top-0 right-0 w-48 h-48 bg-accent/[0.03] rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-1000"></div>
 
       {/* Header: Match Info */}
-      <div className="flex justify-between items-start mb-6 z-10 relative">
-        <div className="text-sm text-gray-400">
-          <p className="font-semibold">{match.matchNumber || "League Match"} • {match.group || "T20"}</p>
-          <p className="text-xs text-gray-500 mt-1">{match.venue || "Stadium"}</p>
+      <div className="flex justify-between items-start mb-10 z-10 relative">
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary opacity-40 leading-none">{match.matchNumber || "League Match"} • {match.group || "T20"}</p>
+          <p className="text-[9px] font-bold text-text-secondary opacity-30 uppercase tracking-tight italic">{match.venue || "Stadium"}</p>
         </div>
-        
+
         {/* Live/Status Badge */}
         {isLive ? (
-           <span className="px-3 py-1 bg-red-600/20 text-red-500 border border-red-500/50 text-xs font-black rounded-full animate-pulse tracking-widest">
-             LIVE
-           </span>
+          <span className="px-5 py-1.5 bg-error/10 text-error border border-error/20 text-[9px] font-black rounded-full animate-pulse tracking-[0.2em] uppercase">
+            LIVE NOW
+          </span>
         ) : (
-           <span className="px-3 py-1 bg-blue-900/30 text-blue-400 text-xs font-bold rounded-full border border-blue-800/50 tracking-wider">
-             {new Date(match.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-           </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="px-4 py-1.5 bg-accent/5 text-accent text-[9px] font-black rounded-xl border border-accent/10 tracking-[0.15em] uppercase shadow-sm">
+              {new Date(match.startTime).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </span>
+            <span className="text-[9px] font-black text-text-secondary opacity-30 uppercase tracking-widest">{new Date(match.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
         )}
       </div>
 
       {/* Teams Section */}
-      <div className="flex justify-between items-center mb-8 z-10 relative mt-4">
+      <div className="flex justify-between items-center mb-10 z-10 relative px-2">
         {/* Team A */}
-        <div className="text-center flex-1">
-          <TeamLogo team={match.teamA} />
-          <h3 className="font-black text-lg text-white leading-tight mt-2">{match.teamA?.shortName || "TBD"}</h3>
+        <div className="text-center flex-1 group/team">
+          <TeamLogo team={match.teamA} isWinner={isCompleted && (match.winner?._id === match.teamA?._id)} />
+          <h3 className="font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors">{match.teamA?.name || "TBD"}</h3>
+          {isCompleted && (
+            <p className="text-xs font-black text-text-secondary mt-1 opacity-60">
+              {match.teamAScore?.r}/{match.teamAScore?.w}
+              <span className="text-[10px] opacity-40">({match.teamAScore?.o})</span>
+            </p>
+          )}
         </div>
 
-        <div className="px-4 text-center">
-            <span className="text-gray-600 font-black text-xl italic tracking-tighter mix-blend-screen opacity-50">VS</span>
+        <div className="px-4 text-center shrink-0">
+          <div className="w-10 h-10 bg-background/50 rounded-full flex items-center justify-center border border-border shadow-inner">
+            <span className="text-text-secondary font-black text-xs opacity-20 italic">VS</span>
+          </div>
         </div>
 
         {/* Team B */}
-        <div className="text-center flex-1">
-          <TeamLogo team={match.teamB} />
-          <h3 className="font-black text-lg text-white leading-tight mt-2">{match.teamB?.shortName || "TBD"}</h3>
+        <div className="text-center flex-1 group/team">
+          <TeamLogo team={match.teamB} isWinner={isCompleted && (match.winner?._id === match.teamB?._id || match.winner === match.teamB?._id)} />
+          <h3 className="font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors">{match.teamB?.name || "TBD"}</h3>
+          {isCompleted && (
+            <p className="text-xs font-black text-text-secondary mt-1 opacity-60">
+              {match.teamBScore?.r}/{match.teamBScore?.w} <span className="text-[10px] opacity-40">({match.teamBScore?.o})</span>
+            </p>
+          )}
         </div>
       </div>
 
+      {/* Result Backdrop for completed matches */}
+      {isCompleted && match.result && (
+        <div className="mb-8 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-center relative z-10">
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{match.result}</p>
+        </div>
+      )}
+
       {/* Countdown / Action Area */}
-      <div className="mt-6">
+      <div className="z-10 relative space-y-6">
         {timeLeft && isUpcoming && !match.isLocked ? (
-          <div className="text-center mb-5 bg-black/30 p-3 rounded-lg border border-white/5">
-            <p className="text-blue-400/80 text-[10px] uppercase font-bold tracking-widest mb-1">Locks in</p>
-            <div className="text-2xl font-mono text-white font-black tracking-wider">
-              {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+          <div className="text-center py-5 bg-surface-hover/50 rounded-[1.5rem] border border-border/50 group-hover:bg-surface-hover transition-colors duration-500">
+            <p className="text-text-secondary text-[9px] uppercase font-black tracking-[0.3em] mb-2 opacity-30 italic">Arena Locks In</p>
+            <div className="text-2xl font-black text-text-primary tracking-[0.1em] font-mono">
+              {(timeLeft as any).days ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="text-accent">{String((timeLeft as any).days).padStart(2, '0')}</span>
+                  <span className="text-[10px] opacity-40 mt-1">DAYS LEFT</span>
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-1">
+                  <span className={startsSoon ? "text-error" : "text-text-primary"}>{String(timeLeft.hours).padStart(2, '0')}</span>
+                  <span className="opacity-20">:</span>
+                  <span className={startsSoon ? "text-error" : "text-text-primary"}>{String(timeLeft.minutes).padStart(2, '0')}</span>
+                  <span className="opacity-20">:</span>
+                  <span className={startsSoon ? "text-error" : "text-text-primary"}>{String(timeLeft.seconds).padStart(2, '0')}</span>
+                </span>
+              )}
             </div>
           </div>
         ) : null}
