@@ -22,6 +22,7 @@ export interface IMatch {
   winner?: mongoose.Types.ObjectId;
   teamAScore?: { r?: number; w?: number; o?: string };
   teamBScore?: { r?: number; w?: number; o?: string };
+  players?: string[]; // Array of player names for dropdowns
   createdAt: Date;
 }
 
@@ -57,7 +58,12 @@ const MatchSchema = new Schema<IMatch>({
      w: { type: Number },
      o: { type: String },
   },
-});
+  players: { type: [String], default: [] },
+}, { timestamps: true });
+
+// Optimize query performance for high traffic
+MatchSchema.index({ startTime: 1 });
+MatchSchema.index({ status: 1 });
 
 const Match: Model<IMatch> = models.Match || mongoose.model<IMatch>('Match', MatchSchema);
 

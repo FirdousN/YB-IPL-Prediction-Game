@@ -87,17 +87,17 @@ export default function AdminTeamsPage() {
           body: JSON.stringify(formData)
         });
       }
-      
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Failed to ${editingTeamId ? 'update' : 'create'} team`);
-      
+
       if (editingTeamId) {
         setTeams(teams.map(t => t._id === editingTeamId ? data : t));
         setEditingTeamId(null);
       } else {
         setTeams([...teams, data]);
       }
-      
+
       setFormData({ name: "", shortName: "", logoUrl: "" });
     } catch (err: any) {
       setError(err.message);
@@ -109,7 +109,7 @@ export default function AdminTeamsPage() {
     setIsDeleting(id);
 
     try {
-      const res = await fetch(`/api/admin/teams/${id}`, { 
+      const res = await fetch(`/api/admin/teams/${id}`, {
         method: "DELETE",
         credentials: "include"
       });
@@ -139,8 +139,8 @@ export default function AdminTeamsPage() {
             {editingTeamId ? "Edit Team Details" : "Add New Team"}
           </h2>
           {editingTeamId && (
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => {
                 setEditingTeamId(null);
                 setFormData({ name: "", shortName: "", logoUrl: "" });

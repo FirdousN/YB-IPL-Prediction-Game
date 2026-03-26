@@ -11,7 +11,7 @@ const updateMatchSchema = z.object({
   endTime: z.coerce.date().optional(),
   status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'ABANDONED']).optional(),
   result: z.string().optional(),
-  winner: z.string().optional(),
+  winner: z.string().optional().transform(val => val === "" ? undefined : val),
   teamAScore: z.object({
     r: z.number(),
     w: z.number(),

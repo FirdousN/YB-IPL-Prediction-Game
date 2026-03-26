@@ -7,18 +7,18 @@ import dbConnect from "@/src/lib/db";
 import User from "@/src/models/User";
 import Match from "@/src/models/Match";
 import Prediction from "@/src/models/Prediction";
-import { 
-  Calendar, 
-  Trophy, 
-  Users, 
-  TrendingUp, 
-  Clock, 
+import {
+  Calendar,
+  Trophy,
+  Users,
+  TrendingUp,
+  Clock,
   ArrowRight
 } from "lucide-react";
 
 export default async function AdminDashboard() {
   const session = await getSession() as { role?: string, name?: string } | null;
-  
+
   if (!session || (session.role !== 'admin' && session.role !== 'ADMIN')) {
     redirect("/admin/login");
   }
@@ -26,13 +26,22 @@ export default async function AdminDashboard() {
   // Connect to DB to fetch real stats
   await dbConnect();
 
-  const [activeMatches, totalUsers, totalPredictions, completedMatches, recentMatches] = await Promise.all([
+  const [activeMatches, totalUsers, totalPredictions, completedMatches, rawRecentMatches] = await Promise.all([
     Match.countDocuments({ status: { $in: ['LIVE', 'UPCOMING'] } }),
     User.countDocuments({ role: 'user' }), // only count standard users
     Prediction.countDocuments(),
     Match.countDocuments({ status: 'COMPLETED' }),
-    Match.find().sort({ startTime: -1 }).limit(4).select('teamA teamB status startTime').lean()
+    Match.find()
+      .populate('teamA', 'shortName')
+      .populate('teamB', 'shortName')
+      .sort({ startTime: -1 })
+      .limit(4)
+      .select('teamA teamB status startTime')
+      .lean()
   ]);
+
+  // Essential: Serialize Mongoose/Date objects for Next.js Server Components -> Client boundary if needed
+  const recentMatches = JSON.parse(JSON.stringify(rawRecentMatches));
 
   const stats = [
     { label: "Active Matches", value: activeMatches.toString(), icon: Calendar, color: "bg-blue-500", trend: "Live & Upcoming" },
@@ -42,34 +51,34 @@ export default async function AdminDashboard() {
   ];
 
   const quickActions = [
-    { 
-      title: "Schedule Match", 
-      desc: "Add new cricket matches to the predictor.", 
-      href: "/admin/matches", 
+    {
+      title: "Schedule Match",
+      desc: "Add new cricket matches to the predictor.",
+      href: "/admin/matches",
       icon: Calendar,
       btnColor: "bg-blue-600 hover:bg-blue-700"
     },
-    { 
-      title: "Declare Winners", 
-      desc: "Assign points and winners for ended matches.", 
-      href: "/admin/results", 
+    {
+      title: "Declare Winners",
+      desc: "Assign points and winners for ended matches.",
+      href: "/admin/results",
       icon: Trophy,
       btnColor: "bg-emerald-600 hover:bg-emerald-700"
     },
-    { 
-      title: "Manage Users", 
-      desc: "Review participant details and activity.", 
-      href: "/admin/users", 
+    {
+      title: "Manage Users",
+      desc: "Review participant details and activity.",
+      href: "/admin/users",
       icon: Users,
       btnColor: "bg-purple-600 hover:bg-purple-700"
     },
-    { 
-        title: "Leaderboard Settings", 
-        desc: "Configure prize lists and rankings.", 
-        href: "/admin/results", 
-        icon: TrendingUp,
-        btnColor: "bg-amber-600 hover:bg-amber-700"
-      },
+    {
+      title: "Leaderboard Settings",
+      desc: "Configure prize lists and rankings.",
+      href: "/admin/results",
+      icon: TrendingUp,
+      btnColor: "bg-amber-600 hover:bg-amber-700"
+    },
   ];
 
   return (
@@ -112,8 +121,8 @@ export default async function AdminDashboard() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {quickActions.map((action, i) => (
-              <Link 
-                key={i} 
+              <Link
+                key={i}
                 href={action.href}
                 className="group p-6 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all"
               >
@@ -147,7 +156,7 @@ export default async function AdminDashboard() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-700 tracking-tight">
-                    {match.teamA} vs {match.teamB}
+                    {match.teamA?.shortName || "TBD"} vs {match.teamB?.shortName || "TBD"}
                   </p>
                   <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-tighter">
                     {match.status} &bull; {new Date(match.startTime).toLocaleDateString()}

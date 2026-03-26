@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Trophy, 
-  Users, 
-  Calendar, 
+import {
+  LayoutDashboard,
+  Trophy,
+  Users,
+  Calendar,
   LogOut,
   ChevronRight,
   Menu,
@@ -53,17 +53,16 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <aside 
-        className={`${
-          isSidebarOpen ? "w-64" : "w-20"
-        } bg-[#001f3f] text-white transition-all duration-300 flex flex-col shadow-xl z-20`}
+      <aside
+        className={`${isSidebarOpen ? "w-64" : "w-20"
+          } bg-[#001f3f] text-white transition-all duration-300 flex flex-col shadow-xl z-20`}
       >
         {/* Sidebar Header */}
         <div className="p-6 flex items-center justify-between border-b border-white/10">
           <div className={`font-bold text-xl tracking-tight overflow-hidden transition-all duration-300 ${isSidebarOpen ? "w-auto opacity-100" : "w-0 opacity-0"}`}>
             YB <span className="text-blue-400">ADMIN</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="p-1 hover:bg-white/10 rounded-lg transition-colors"
           >
@@ -79,11 +78,10 @@ export default function AdminLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center p-3 rounded-xl transition-all group ${
-                  isActive 
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50" 
+                className={`flex items-center p-3 rounded-xl transition-all group ${isActive
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50"
                     : "text-slate-300 hover:bg-white/10 hover:text-white"
-                }`}
+                  }`}
               >
                 <item.icon size={22} className={`${isActive ? "text-white" : "text-slate-400 group-hover:text-blue-400"} transition-colors`} />
                 <span className={`ml-4 font-medium transition-all duration-300 ${isSidebarOpen ? "opacity-100" : "opacity-0 w-0"}`}>
@@ -97,7 +95,7 @@ export default function AdminLayout({
 
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-white/10">
-          <button 
+          <button
             onClick={handleLogout}
             className={`w-full flex items-center p-3 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-100 transition-all group`}
           >

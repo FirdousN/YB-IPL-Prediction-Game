@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/db';
 import Team from '@/src/models/Team';
 import { getSession } from '@/src/lib/session';
+import { z } from 'zod';
+
+const teamUpdateSchema = z.object({
+  name: z.string().min(2).max(50).optional(),
+  shortName: z.string().min(2).max(5).toUpperCase().optional(),
+  logoUrl: z.string().optional(),
+});
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,12 +20,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     await dbConnect();
     const body = await request.json();
-    const team = await Team.findByIdAndUpdate(id, body, { new: true });
+    const parsed = teamUpdateSchema.parse(body);
+
+    const team = await Team.findByIdAndUpdate(id, parsed, { new: true });
     
     if (!team) return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     return NextResponse.json(team);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof z.ZodError ? error.issues : error.message }, { status: 400 });
   }
 }
 
@@ -35,6 +44,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!team) return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     return NextResponse.json({ message: 'Team deleted successfully' });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

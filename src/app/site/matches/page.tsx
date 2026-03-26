@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import MatchCard from "@/src/components/MatchCard";
+import { useEffect, useState, useMemo } from "react";
+import MatchFilterSort from "@/src/components/matches/MatchFilterSort";
+import UpcomingSection from "@/src/components/matches/UpcomingSection";
+import LiveSection from "@/src/components/matches/LiveSection";
+import CompletedSection from "@/src/components/matches/CompletedSection";
+import MyPredictionsSection from "@/src/components/matches/MyPredictionsSection";
+import AllMatchesSection from "@/src/components/matches/AllMatchesSection";
 
 interface Team {
   _id: string;
@@ -25,44 +30,50 @@ interface Prediction {
   _id: string;
   matchId: Match;
   answers: any[];
+  totalPoints?: number;
+  isWinner?: boolean;
+  rank?: number;
 }
 
+type TabType = "ALL" | "UPCOMING" | "LIVE" | "COMPLETED" | "MY_PREDICTIONS";
+
 export default function MatchesPage() {
-  const [activeTab, setActiveTab] = useState<"UPCOMING" | "LIVE" | "COMPLETED" | "MY_PICKS">("UPCOMING");
+  const [activeTab, setActiveTab] = useState<TabType>("UPCOMING");
   const [matches, setMatches] = useState<Match[]>([]);
   const [myPicks, setMyPicks] = useState<Prediction[]>([]);
   const [liveMatches, setLiveMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Filter & Sort State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("date-asc");
+  const [filterTeam, setFilterTeam] = useState("");
+  const [filterTournament, setFilterTournament] = useState("");
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        // Fetch Matches
         const resMatches = await fetch("/api/matches");
         if (!resMatches.ok) throw new Error("Failed to fetch matches");
         const dataMatches = await resMatches.json();
-        const sorted = dataMatches.sort((a: Match, b: Match) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-        setMatches(sorted);
+        setMatches(dataMatches);
 
-        // Fetch My Picks
         try {
-          const resPicks = await fetch("/api/predictions");
-          if (resPicks.ok) {
-            const dataPicks = await resPicks.json();
-            setMyPicks(dataPicks);
-          }
-        } catch (e) {}
+          const resPicks = await fetch("/api/predictions", { cache: "no-store" });
+          if (resPicks.ok) setMyPicks(await resPicks.json());
+        } catch (e) {
+          console.error('[MatchesPage] Predictions fetch error:', e);
+        }
 
-        // Fetch Live Scores
         try {
           const resLive = await fetch("/api/live-matches");
           if (resLive.ok) {
             const dataLive = await resLive.json();
             if (dataLive.data) setLiveMatches(dataLive.data);
           }
-        } catch (e) {}
+        } catch (e) { }
 
       } catch (err: unknown) {
         setError((err instanceof Error ? err.message : String(err)));
@@ -73,107 +84,137 @@ export default function MatchesPage() {
     fetchData();
   }, []);
 
-  const getFilteredMatches = () => {
-    if (activeTab === "UPCOMING") {
-      return matches.filter(m => m.status === "UPCOMING" || new Date(m.startTime) > new Date());
-    }
-    if (activeTab === "COMPLETED") {
-      return matches.filter(m => m.status === "COMPLETED" || new Date(m.startTime) < new Date(Date.now() - 6 * 60 * 60 * 1000));
-    }
-    if (activeTab === "MY_PICKS") {
-      return myPicks.map(p => ({ ...p.matchId }));
-    }
-    return [];
-  };
+  // Unique Teams & Tournaments for filters
+  const teamsList = useMemo(() => {
+    const names = new Set<string>();
+    matches.forEach(m => {
+      if (m.teamA?.name) names.add(m.teamA.name);
+      if (m.teamB?.name) names.add(m.teamB.name);
+    });
+    return Array.from(names);
+  }, [matches]);
 
-  const displayMatches = getFilteredMatches();
+  const tournamentsList = useMemo(() => {
+    const groups = new Set<string>();
+    matches.forEach(m => {
+      if (m.group) groups.add(m.group);
+    });
+    return Array.from(groups);
+  }, [matches]);
+
+  // Derived Filtering Logic
+  const processedMatches = useMemo(() => {
+    let filtered = [...matches];
+
+    // 1. Tab Filtering (Pre-filter based on active state)
+    if (activeTab === "UPCOMING") filtered = filtered.filter(m => m.status?.toUpperCase() === "UPCOMING");
+    else if (activeTab === "LIVE") filtered = filtered.filter(m => m.status?.toUpperCase() === "LIVE");
+    else if (activeTab === "COMPLETED") filtered = filtered.filter(m => m.status?.toUpperCase() === "COMPLETED" || m.status?.toUpperCase() === "ABANDONED");
+    else if (activeTab === "MY_PREDICTIONS") {
+       // Special map for predictions
+       return myPicks
+        .filter(p => p.matchId) // Ensure matchId exists
+        .map(p => ({ 
+          ...p.matchId, 
+          prediction: { answers: p.answers, totalPoints: p.totalPoints, isWinner: p.isWinner, rank: p.rank } 
+        }))
+        .filter(m => {
+          const matchesSearch = searchQuery === "" || 
+            m.teamA.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            m.teamB.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.venue?.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchesTeam = filterTeam === "" || m.teamA.name === filterTeam || m.teamB.name === filterTeam;
+          const matchesTour = filterTournament === "" || m.group === filterTournament;
+          return matchesSearch && matchesTeam && matchesTour;
+        })
+        .sort((a, b) => {
+          const timeA = new Date(a.startTime).getTime();
+          const timeB = new Date(b.startTime).getTime();
+          return sortBy === "date-asc" ? timeA - timeB : timeB - timeA;
+        });
+    }
+
+    // 2. Global Search
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => 
+        m.teamA.name.toLowerCase().includes(q) || 
+        m.teamB.name.toLowerCase().includes(q) || 
+        m.venue?.toLowerCase().includes(q)
+      );
+    }
+
+    // 3. Team Filter
+    if (filterTeam) {
+      filtered = filtered.filter(m => m.teamA.name === filterTeam || m.teamB.name === filterTeam);
+    }
+
+    // 4. Tournament Filter
+    if (filterTournament) {
+      filtered = filtered.filter(m => m.group === filterTournament);
+    }
+
+    // 5. Sorting
+    filtered.sort((a, b) => {
+      const timeA = new Date(a.startTime).getTime();
+      const timeB = new Date(b.startTime).getTime();
+      return sortBy === "date-asc" ? timeA - timeB : timeB - timeA;
+    });
+
+    return filtered;
+  }, [matches, activeTab, myPicks, searchQuery, filterTeam, filterTournament, sortBy]);
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[50vh]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
     </div>
   );
 
-  if (error) return <div className="text-center text-red-500 p-8">Error: {error}</div>;
+  if (error) return <div className="text-center text-error p-8 font-bold">Error: {error}</div>;
 
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex justify-center space-x-1 bg-gray-800/50 p-1 rounded-xl max-w-lg mx-auto backdrop-blur-sm border border-white/5 overflow-x-auto">
-        {(["UPCOMING", "LIVE", "COMPLETED", "MY_PICKS"] as const).map((tab) => (
+    <div className="space-y-8 pb-20">
+      {/* Tab Navigation */}
+      <div className="flex justify-center space-x-1 bg-surface-hover/30 p-1.5 rounded-2xl max-w-2xl mx-auto backdrop-blur-md border border-border overflow-x-auto no-scrollbar shadow-sm">
+        {(["ALL", "UPCOMING", "LIVE", "COMPLETED", "MY_PREDICTIONS"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`
-              flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all duration-200 uppercase tracking-widest min-w-max
+              flex-1 py-3 px-6 rounded-xl text-[10px] font-black transition-all duration-300 uppercase tracking-[0.15em] min-w-max flex items-center justify-center
               ${activeTab === tab
-                ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30"
-                : "text-gray-400 hover:text-white hover:bg-white/5"}
+                ? "bg-accent text-white shadow-lg shadow-accent/20 scale-105"
+                : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/50"}
             `}
           >
-            {tab.replace("_", " ")}
-            {tab === "LIVE" && <span className="ml-2 w-2 h-2 rounded-full bg-red-500 inline-block animate-pulse"></span>}
+            {tab === "MY_PREDICTIONS" ? "MY PREDICTIONS" : tab}
+            {(tab === "LIVE" && (liveMatches.length > 0 || matches.some(m => m.status === 'LIVE'))) && <span className="ml-2 w-1.5 h-1.5 rounded-full bg-red-500 inline-block animate-pulse shrink-0"></span>}
           </button>
         ))}
       </div>
 
-      {/* Match Grid */}
-      {activeTab === "LIVE" ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {liveMatches.length === 0 ? (
-             <div className="md:col-span-2 lg:col-span-3 text-center py-12 bg-gray-800/30 rounded-2xl border border-dashed border-gray-700">
-               <p className="text-gray-400 text-lg">No live scoring data available at the moment.</p>
-             </div>
-          ) : (
-            liveMatches.map((liveMatch, index) => (
-              <div key={liveMatch.id || index} className="p-6 bg-gradient-to-b from-[#1a233a] to-[#0a1122] border border-blue-800/40 rounded-2xl shadow-xl hover:border-blue-500/50 transition-all group overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
-                <div className="flex justify-between items-center mb-6">
-                   <div className="flex items-center space-x-2">
-                     <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                     <span className="text-xs font-black tracking-widest text-red-500">LIVE RESULT</span>
-                   </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold text-white">{liveMatch.t1 || "Team 1"}</span>
-                    <span className="text-lg font-bold text-gray-300">{liveMatch.t1s || "-"}</span>
-                  </div>
-                  <div className="w-full h-px bg-gray-700/50"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold text-white">{liveMatch.t2 || "Team 2"}</span>
-                    <span className="text-lg font-bold text-gray-300">{liveMatch.t2s || "-"}</span>
-                  </div>
-                </div>
-                
-                <div className="mt-8 p-3 rounded-xl bg-blue-900/20 border border-blue-800/30">
-                  <p className="text-center text-sm font-semibold text-blue-300">
-                    {liveMatch.status || "Match Details Loading..."}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      ) : (
-        <>
-          {displayMatches.length === 0 ? (
-            <div className="text-center py-12 bg-gray-800/30 rounded-2xl border border-dashed border-gray-700">
-              <p className="text-gray-400 text-lg">
-                {activeTab === "MY_PICKS"
-                  ? "You haven't made any predictions yet."
-                  : "No matches scheduled for this day."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {displayMatches.map((match) => (
-                <MatchCard key={match._id} match={match} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      {/* Filter & Sort Bar */}
+      <MatchFilterSort 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        filterTeam={filterTeam}
+        setFilterTeam={setFilterTeam}
+        filterTournament={filterTournament}
+        setFilterTournament={setFilterTournament}
+        teams={teamsList}
+        tournaments={tournamentsList}
+      />
+
+      {/* Dynamic Sections */}
+      <div className="min-h-[400px]">
+        {activeTab === "ALL" && <AllMatchesSection matches={processedMatches} />}
+        {activeTab === "UPCOMING" && <UpcomingSection matches={processedMatches} />}
+        {activeTab === "LIVE" && <LiveSection matches={processedMatches} liveMatches={liveMatches} />}
+        {activeTab === "COMPLETED" && <CompletedSection matches={processedMatches} />}
+        {activeTab === "MY_PREDICTIONS" && <MyPredictionsSection matches={processedMatches} />}
+      </div>
     </div>
   );
 }
