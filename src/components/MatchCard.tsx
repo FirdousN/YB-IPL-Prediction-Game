@@ -37,10 +37,12 @@ interface MatchProps {
 
 export default function MatchCard({ match, prediction }: MatchProps) {
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
+  const effectiveStatus = (match as any).computedStatus || match.status;
+
   const isCompleted = match.status?.toUpperCase() === "COMPLETED";
-  const isLiveOrUpcoming = match.status?.toUpperCase() === "LIVE" || match.status?.toUpperCase() === "UPCOMING";
-  const isUpcoming = match.status?.toUpperCase() === "UPCOMING";
-  const isLive = match.status?.toUpperCase() === "LIVE";
+  const isLiveOrUpcoming = effectiveStatus?.toUpperCase() === "LIVE" || effectiveStatus?.toUpperCase() === "UPCOMING";
+  const isUpcoming = effectiveStatus?.toUpperCase() === "UPCOMING";
+  const isLive = effectiveStatus?.toUpperCase() === "LIVE";
   const [startsSoon, setStartsSoon] = useState(false);
 
   useEffect(() => {
@@ -113,13 +115,13 @@ export default function MatchCard({ match, prediction }: MatchProps) {
       if (isMatchToday(match.startTime)) {
         return (
           <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 bg-accent hover:bg-accent-hover text-white font-black rounded-2xl transition-all shadow-xl shadow-accent/20 uppercase tracking-widest text-[11px] active:scale-95">
-            Predict Now
+            {prediction ? "Edit Your Picks" : "Predict Now"}
           </Link>
         );
       } else {
         return (
           <Link href={`/site/matches/${match._id}`} className="block w-full text-center py-4 border border-border hover:bg-surface-hover text-text-secondary font-black rounded-2xl transition-all uppercase tracking-widest text-[10px]">
-            Opens on Match Day
+             {prediction ? "View Your Picks" : "Opens on Match Day"}
           </Link>
         );
       }

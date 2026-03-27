@@ -8,7 +8,7 @@ import { z } from 'zod';
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-    
+
     // Auto-register Team model if not yet registered in this route context
     if (!Team) { console.log('Team model ensuring load...'); }
 
@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     const filterToday = searchParams.get('today');
     const getAll = searchParams.get('all') === 'true';
 
-    let query: any = {};
-    
+    let query: any = { isArchived: { $ne: true } };
+
     if (!getAll) {
       // Allow UPCOMING, LIVE, and COMPLETED by default for the user dashboard
       query.status = { $in: ['UPCOMING', 'LIVE', 'COMPLETED'] };
@@ -43,48 +43,30 @@ export async function GET(request: NextRequest) {
 
     console.log('[DEBUG] GET /api/matches returned:', matches.length);
 
-    // Compute isLocked for each match (30 min rule)
+    // Compute isLocked and computedStatus for each match
     const now = new Date();
-    const matchesWithLockStatus = matches.map(match => {
+    const matchesWithStatus = matches.map(match => {
       const lockTime = new Date(match.startTime.getTime() - 30 * 60000); // 30 mins
+      const startTime = new Date(match.startTime);
+      const endTime = new Date(match.endTime || new Date(startTime.getTime() + 4 * 60 * 60 * 1000)); // Default 4h if no endTime
+
+      let computedStatus = match.status;
+
+      // Auto-transition UPCOMING to LIVE
+      if (match.status === 'UPCOMING' && now >= startTime && now < endTime) {
+        computedStatus = 'LIVE';
+      }
+      // Note: COMPLETED should usually be manual, but we show LIVE if it's within window
+
       return {
         ...match.toObject(),
-        isLocked: now > lockTime
+        isLocked: now > lockTime,
+        computedStatus: computedStatus
       };
     });
 
-    return NextResponse.json(matchesWithLockStatus);
+    return NextResponse.json(matchesWithStatus);
   } catch (error: unknown) {
     return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) }, { status: 500 });
-  }
-}
-
-const matchSchema = z.object({
-  teamA: z.string(),
-  teamB: z.string(),
-  startTime: z.coerce.date(),
-  endTime: z.coerce.date(),
-  venue: z.string().optional(),
-  group: z.string().optional(),
-  status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'ABANDONED']).default('UPCOMING'),
-  winner: z.string().optional().transform((val: string | undefined) => val === "" ? undefined : val),
-  questions: z.array(z.any()).optional().default([]),
-});
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getSession(request) as { role?: string; participantId?: string; userId?: string; name?: string } | null;
-    if (!session || (session.role !== 'ADMIN' && session.role !== 'admin')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    await dbConnect();
-    const body = await request.json();
-    const parsed = matchSchema.parse(body);
-
-    const match = await Match.create(parsed);
-    return NextResponse.json(match, { status: 201 });
-  } catch (error: unknown) {
-    return NextResponse.json({ error: (error instanceof Error ? error.message : String(error)) }, { status: 400 });
   }
 }
