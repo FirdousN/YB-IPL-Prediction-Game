@@ -82,11 +82,11 @@ export async function POST(request: NextRequest) {
         const teamBName = dbTeams.find(t => t._id.toString() === teamBId)?.name || "Team B";
 
         const defaultQuestions = [
-          { text: "Who will win the match?", type: "OPTIONS" as const, options: [teamAName, teamBName] },
-          { text: "Who will score the most runs in this match?", type: "TEXT" as const },
-          { text: "Who will take the most wickets in this match?", type: "TEXT" as const },
-          { text: "Total runs scored by the winning team?", type: "TEXT" as const },
-          { text: "Player / Man of the Match?", type: "TEXT" as const }
+          { text: "Who will win the match?", type: "OPTIONS" as const, options: [teamAName, teamBName], points: 20, ruleType: "EXACT", unit: "TEAM", result: "" },
+          { text: "Who will score the most runs in this match?", type: "TEXT" as const, options: [], points: 20, ruleType: "EXACT", unit: "PLAYER", result: "" },
+          { text: "Who will take the most wickets in this match?", type: "TEXT" as const, options: [], points: 20, ruleType: "EXACT", unit: "PLAYER", result: "" },
+          { text: "Total runs scored by the winning team?", type: "TEXT" as const, options: [], points: 30, ruleType: "NEAREST", maxRange: 30, unit: "RUNS", result: "" },
+          { text: "Player / Man of the Match?", type: "TEXT" as const, options: [], points: 20, ruleType: "EXACT", unit: "PLAYER", result: "" }
         ];
 
         // Upsert Match

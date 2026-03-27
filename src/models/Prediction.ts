@@ -15,6 +15,8 @@ export interface IPrediction {
   totalPoints?: number;
   isWinner?: boolean;
   rank?: number;
+  streak?: number;
+  isTopPredictor?: boolean;
 }
 
 const PredictionAnswerSchema = new Schema<IPredictionAnswer>({
@@ -31,6 +33,8 @@ const PredictionSchema = new Schema<IPrediction>({
   totalPoints: { type: Number, default: 0 },
   isWinner: { type: Boolean, default: false },
   rank: { type: Number },
+  streak: { type: Number, default: 0 },
+  isTopPredictor: { type: Boolean, default: false },
 }, { timestamps: true });
 
 // Compound index to ensure one prediction per user per match

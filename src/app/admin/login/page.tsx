@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
 
         {/* Footer info */}
         <p className="text-center text-slate-400 text-sm mt-8 font-medium">
-          &copy; 2024 YesBharath. All rights reserved.
+          &copy; 2026 YesBharath. All rights reserved.
         </p>
       </div>
     </div>

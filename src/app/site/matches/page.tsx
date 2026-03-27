@@ -104,35 +104,28 @@ export default function MatchesPage() {
 
   // Derived Filtering Logic
   const processedMatches = useMemo(() => {
-    let filtered = [...matches];
+    // Merge prediction data into matches for all views
+    let enhancedMatches = matches.map(m => {
+      const pred = myPicks.find(p => String(p.matchId?._id || p.matchId) === String(m._id));
+      return {
+        ...m,
+        prediction: pred ? { answers: pred.answers, totalPoints: pred.totalPoints, isWinner: pred.isWinner, rank: pred.rank } : undefined
+      };
+    });
 
-    // 1. Tab Filtering (Pre-filter based on active state)
-    if (activeTab === "UPCOMING") filtered = filtered.filter(m => m.status?.toUpperCase() === "UPCOMING");
-    else if (activeTab === "LIVE") filtered = filtered.filter(m => m.status?.toUpperCase() === "LIVE");
-    else if (activeTab === "COMPLETED") filtered = filtered.filter(m => m.status?.toUpperCase() === "COMPLETED" || m.status?.toUpperCase() === "ABANDONED");
-    else if (activeTab === "MY_PREDICTIONS") {
-       // Special map for predictions
-       return myPicks
-        .filter(p => p.matchId) // Ensure matchId exists
-        .map(p => ({ 
-          ...p.matchId, 
-          prediction: { answers: p.answers, totalPoints: p.totalPoints, isWinner: p.isWinner, rank: p.rank } 
-        }))
-        .filter(m => {
-          const matchesSearch = searchQuery === "" || 
-            m.teamA.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            m.teamB.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            m.venue?.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchesTeam = filterTeam === "" || m.teamA.name === filterTeam || m.teamB.name === filterTeam;
-          const matchesTour = filterTournament === "" || m.group === filterTournament;
-          return matchesSearch && matchesTeam && matchesTour;
-        })
-        .sort((a, b) => {
-          const timeA = new Date(a.startTime).getTime();
-          const timeB = new Date(b.startTime).getTime();
-          return sortBy === "date-asc" ? timeA - timeB : timeB - timeA;
-        });
+    let filtered = [...enhancedMatches];
+
+    // 1. Tab Filtering
+    if (activeTab === "UPCOMING") {
+      filtered = filtered.filter(m => (m as any).computedStatus?.toUpperCase() === "UPCOMING");
+    } else if (activeTab === "LIVE") {
+      filtered = filtered.filter(m => (m as any).computedStatus?.toUpperCase() === "LIVE");
+    } else if (activeTab === "COMPLETED") {
+      filtered = filtered.filter(m => m.status?.toUpperCase() === "COMPLETED" || m.status?.toUpperCase() === "ABANDONED");
+    } else if (activeTab === "MY_PREDICTIONS") {
+      filtered = filtered.filter(m => m.prediction !== undefined);
     }
+    // "ALL" tab shows everything (no filter)
 
     // 2. Global Search
     if (searchQuery) {
@@ -188,7 +181,7 @@ export default function MatchesPage() {
             `}
           >
             {tab === "MY_PREDICTIONS" ? "MY PREDICTIONS" : tab}
-            {(tab === "LIVE" && (liveMatches.length > 0 || matches.some(m => m.status === 'LIVE'))) && <span className="ml-2 w-1.5 h-1.5 rounded-full bg-red-500 inline-block animate-pulse shrink-0"></span>}
+            {(tab === "LIVE" && (liveMatches.length > 0 || matches.some(m => (m as any).computedStatus === 'LIVE' || m.status === 'LIVE'))) && <span className="ml-2 w-1.5 h-1.5 rounded-full bg-red-500 inline-block animate-pulse shrink-0"></span>}
           </button>
         ))}
       </div>
