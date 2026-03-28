@@ -397,7 +397,11 @@ export default function AdminMatchesPage() {
         throw new Error(data.error || "Something went wrong while saving the match.");
       }
 
-      setModalMessage("Match saved successfully!");
+      setModalMessage(
+        data.autoResolved
+          ? "Match saved & prediction scores recalculated automatically!"
+          : "Match saved successfully!"
+      );
       setShowSuccessModal(true);
       setShowCreateForm(false);
       fetchMatches();
@@ -578,17 +582,15 @@ export default function AdminMatchesPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-border pb-4 gap-4">
                 <div className="space-y-1">
                   <h2 className="text-xl font-bold">Prediction Form Builder</h2>
-                  {editingHasPredictions && (
-                    <p className="text-[10px] font-black text-amber-500 bg-amber-500/10 px-3 py-1 rounded-lg inline-flex items-center uppercase tracking-widest animate-pulse border border-amber-500/20">
-                      <Lock size={12} className="mr-1.5" /> Rules & points locked after predictions started
-                    </p>
-                  )}
                 </div>
-                {!editingHasPredictions && (
-                  <button type="button" onClick={handleAddQuestion} className="w-full sm:w-auto text-sm font-bold text-accent bg-accent/10 px-6 py-3 rounded-xl transition border border-accent/20 flex items-center justify-center">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button type="button" onClick={() => setQuestions(dbDefaultQuestions.length > 0 ? dbDefaultQuestions.map(q => ({ ...q })) : DEFAULT_QUESTIONS.map(q => ({ ...q })))} className="text-sm font-bold text-text-secondary bg-surface border border-border px-4 py-3 rounded-xl transition hover:border-accent hover:text-accent flex items-center justify-center">
+                    <List size={16} className="mr-1.5" /> Defaults
+                  </button>
+                  <button type="button" onClick={handleAddQuestion} className="text-sm font-bold text-accent bg-accent/10 px-6 py-3 rounded-xl transition border border-accent/20 flex items-center justify-center">
                     <Plus size={18} className="mr-2" /> Add Question
                   </button>
-                )}
+                </div>
               </div>
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                 {questions.map((q, i) => (
@@ -597,8 +599,8 @@ export default function AdminMatchesPage() {
                       <div className="font-black text-text-secondary opacity-20 text-lg mt-1">{i + 1}.</div>
                       <div className="flex-1 space-y-3">
                         <div className="flex flex-col sm:flex-row gap-2">
-                          <input type="text" value={q.text} onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)} disabled={editingHasPredictions} className={`flex-1 p-3 rounded-xl border border-border bg-surface font-bold outline-none text-text-primary ${editingHasPredictions ? "opacity-60 cursor-not-allowed bg-surface-hover/5" : "focus:ring-2 focus:ring-accent"}`} placeholder="Question text" />
-                          <select value={q.type} onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value as any)} disabled={editingHasPredictions} className={`p-3 rounded-xl border border-border bg-surface font-bold text-accent outline-none ${editingHasPredictions ? "opacity-60 cursor-not-allowed" : ""}`}>
+                          <input type="text" value={q.text} onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)} className="flex-1 p-3 rounded-xl border border-border bg-surface font-bold outline-none text-text-primary focus:ring-2 focus:ring-accent" placeholder="Question text" />
+                          <select value={q.type} onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value as any)} className="p-3 rounded-xl border border-border bg-surface font-bold text-accent outline-none">
                             <option value="OPTIONS">Multiple Choice</option>
                             <option value="TEXT">Fill-in (Text/Num)</option>
                           </select>
@@ -608,18 +610,18 @@ export default function AdminMatchesPage() {
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="flex-1 min-w-[120px]">
                             <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Points</label>
-                            <input type="number" value={q.points} onChange={(e) => handleQuestionChange(q.id, 'points', parseInt(e.target.value) || 0)} disabled={editingHasPredictions} className={`w-full p-2.5 rounded-xl border border-border bg-surface font-black text-center text-text-primary outline-none ${editingHasPredictions ? "opacity-60 cursor-not-allowed" : "focus:ring-2 focus:ring-accent"}`} min="0" max="100" />
+                            <input type="number" value={q.points} onChange={(e) => handleQuestionChange(q.id, 'points', parseInt(e.target.value) || 0)} className="w-full p-2.5 rounded-xl border border-border bg-surface font-black text-center text-text-primary outline-none focus:ring-2 focus:ring-accent" min="0" max="100" />
                           </div>
                           <div className="flex-[2] min-w-[150px]">
                             <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Rule Type</label>
-                            <select value={q.ruleType} onChange={(e) => handleQuestionChange(q.id, 'ruleType', e.target.value as any)} disabled={editingHasPredictions} className={`w-full p-2.5 rounded-xl border border-border bg-surface font-bold text-text-primary outline-none ${editingHasPredictions ? "opacity-60 cursor-not-allowed" : "focus:ring-2 focus:ring-accent"}`}>
+                            <select value={q.ruleType} onChange={(e) => handleQuestionChange(q.id, 'ruleType', e.target.value as any)} className="w-full p-2.5 rounded-xl border border-border bg-surface font-bold text-text-primary outline-none focus:ring-2 focus:ring-accent">
                               <option value="EXACT">EXACT Match</option>
                               <option value="NEAREST">NEAREST (Numerical)</option>
                             </select>
                           </div>
                           <div className="flex-[2] min-w-[150px]">
                             <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Target Unit</label>
-                            <select value={q.unit} onChange={(e) => handleQuestionChange(q.id, 'unit', e.target.value as any)} disabled={editingHasPredictions} className={`w-full p-2.5 rounded-xl border border-border bg-surface font-bold text-text-primary outline-none ${editingHasPredictions ? "opacity-60 cursor-not-allowed" : "focus:ring-2 focus:ring-accent"}`}>
+                            <select value={q.unit} onChange={(e) => handleQuestionChange(q.id, 'unit', e.target.value as any)} className="w-full p-2.5 rounded-xl border border-border bg-surface font-bold text-text-primary outline-none focus:ring-2 focus:ring-accent">
                               <option value="NONE">General / Other</option>
                               <option value="PLAYER">Player name</option>
                               <option value="TEAM">Team name</option>
@@ -632,14 +634,14 @@ export default function AdminMatchesPage() {
                           {q.ruleType === "NEAREST" && (
                             <div className="flex-1 min-w-[120px]">
                               <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Max Range</label>
-                              <input type="number" value={q.maxRange} onChange={(e) => handleQuestionChange(q.id, 'maxRange', parseInt(e.target.value) || 0)} disabled={editingHasPredictions} className={`w-full p-2.5 rounded-xl border border-border bg-surface font-black text-center text-accent outline-none ${editingHasPredictions ? "opacity-60 cursor-not-allowed" : "focus:ring-2 focus:ring-accent"}`} placeholder="e.g. 30" />
+                              <input type="number" value={q.maxRange} onChange={(e) => handleQuestionChange(q.id, 'maxRange', parseInt(e.target.value) || 0)} className="w-full p-2.5 rounded-xl border border-border bg-surface font-black text-center text-accent outline-none focus:ring-2 focus:ring-accent" placeholder="e.g. 30" />
                             </div>
                           )}
                         </div>
                         {q.type === "OPTIONS" && (
                           <div className="bg-surface p-3 rounded-xl border border-border">
                             <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Answer Options (Comma Separated)</label>
-                            <input type="text" value={q.options.join(", ")} onChange={(e) => handleQuestionChange(q.id, 'options', e.target.value.split(",").map(opt => opt.trimStart()))} disabled={editingHasPredictions} placeholder="e.g. MI, CSK, Over 200" className={`w-full text-sm font-medium p-2 border-b border-border bg-transparent outline-none text-text-primary transition ${editingHasPredictions ? "opacity-60 cursor-not-allowed" : "focus:border-accent"}`} />
+                            <input type="text" value={q.options.join(", ")} onChange={(e) => handleQuestionChange(q.id, 'options', e.target.value.split(",").map(opt => opt.trimStart()))} placeholder="e.g. MI, CSK, Over 200" className="w-full text-sm font-medium p-2 border-b border-border bg-transparent outline-none text-text-primary transition focus:border-accent" />
                           </div>
                         )}
                         <div className="bg-accent/5 p-3 rounded-xl border border-accent/10">
@@ -647,11 +649,9 @@ export default function AdminMatchesPage() {
                           <input type="text" value={q.result || ""} onChange={(e) => handleQuestionChange(q.id, 'result', e.target.value)} placeholder="Enter the final correct answer" className="w-full text-sm font-bold p-2 bg-transparent outline-none border-b border-accent/20 focus:border-accent text-text-primary transition" />
                         </div>
                       </div>
-                      {!editingHasPredictions && (
-                        <button type="button" onClick={() => handleRemoveQuestion(q.id)} className="text-text-secondary hover:text-error p-2 bg-surface shadow-sm rounded-xl border border-border transition">
-                          <Trash2 size={20} />
-                        </button>
-                      )}
+                      <button type="button" onClick={() => handleRemoveQuestion(q.id)} className="text-text-secondary hover:text-error p-2 bg-surface shadow-sm rounded-xl border border-border transition">
+                        <Trash2 size={20} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -776,7 +776,10 @@ export default function AdminMatchesPage() {
               </div>
 
               <div className="pt-6 flex flex-col gap-3">
-                <button type="submit" className="w-full bg-[#001f3f] hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition shadow-xl text-lg uppercase tracking-wider">Save Partial Results</button>
+                <button 
+                type="submit" className="w-full bg-[#001f3f] hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition shadow-xl text-lg uppercase tracking-wider">
+                  Save Partial Results
+                </button>
                 <button
                   type="button"
                   onClick={async () => {
@@ -1033,3 +1036,4 @@ export default function AdminMatchesPage() {
     </div>
   );
 }
+
