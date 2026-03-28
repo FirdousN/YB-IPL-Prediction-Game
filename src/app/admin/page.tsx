@@ -20,34 +20,57 @@ import {
 export default async function AdminDashboard() {
   const session = await getSession() as { role?: string, name?: string } | null;
 
+  // 1. Session Redirect (Must be outside of the try-catch for Next.js to intercept correctly)
   if (!session || (session.role !== 'admin' && session.role !== 'ADMIN')) {
     redirect("/admin/login");
   }
 
-  // Connect to DB to fetch real stats
+  // 2. Data Fetching Container
+  let data;
   try {
     await dbConnect();
+    
+    // Use a single Promise.all for performance with error tracking
+    const [activeCount, userCount, predictionCount, completedCount, matches] = await Promise.all([
+      Match.countDocuments({ status: { $in: ['LIVE', 'UPCOMING'] } }),
+      User.countDocuments({ role: 'user' }), 
+      Prediction.countDocuments(),
+      Match.countDocuments({ status: 'COMPLETED' }),
+      Match.find()
+        .populate('teamA', 'shortName')
+        .populate('teamB', 'shortName')
+        .sort({ startTime: -1 })
+        .limit(4)
+        .select('teamA teamB status startTime')
+        .lean()
+    ]);
+
+    data = {
+      activeMatches: activeCount,
+      totalUsers: userCount,
+      totalPredictions: predictionCount,
+      completedMatches: completedCount,
+      recentMatches: JSON.parse(JSON.stringify(matches))
+    };
+
   } catch (error) {
-    console.error("[CRITICAL] Database connection failed in Admin Dashboard:", error);
-    throw new Error("Unable to connect to the database. Please check your environment variables.");
+    console.error("[CRITICAL] Dashboard Data Load Error:", error);
+    // Provide safe defaults if only partial data fails, or throw if DB is down
+    if (error instanceof Error && error.message.includes('connect')) {
+       throw error; // Rethrow DB connection errors to show the global error boundary
+    }
+    
+    // Fallback data structure to prevent hydration/render crash
+    data = {
+      activeMatches: 0,
+      totalUsers: 0,
+      totalPredictions: 0,
+      completedMatches: 0,
+      recentMatches: []
+    };
   }
 
-  const [activeMatches, totalUsers, totalPredictions, completedMatches, rawRecentMatches] = await Promise.all([
-    Match.countDocuments({ status: { $in: ['LIVE', 'UPCOMING'] } }),
-    User.countDocuments({ role: 'user' }), // only count standard users
-    Prediction.countDocuments(),
-    Match.countDocuments({ status: 'COMPLETED' }),
-    Match.find()
-      .populate('teamA', 'shortName')
-      .populate('teamB', 'shortName')
-      .sort({ startTime: -1 })
-      .limit(4)
-      .select('teamA teamB status startTime')
-      .lean()
-  ]);
-
-  // Essential: Serialize Mongoose/Date objects for Next.js Server Components -> Client boundary if needed
-  const recentMatches = JSON.parse(JSON.stringify(rawRecentMatches));
+  const { activeMatches, totalUsers, totalPredictions, completedMatches, recentMatches } = data;
 
   const stats = [
     { label: "Active Matches", value: activeMatches.toString(), icon: Calendar, color: "bg-blue-500", trend: "Live & Upcoming" },
