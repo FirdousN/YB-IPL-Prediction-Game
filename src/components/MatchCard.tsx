@@ -198,6 +198,7 @@ export default function MatchCard({ match, prediction }: MatchProps) {
           )}
         </div>
 
+        {/* VS */}
         <div className="px-4 text-center shrink-0">
           <div className="w-10 h-10 bg-background/50 rounded-full flex items-center justify-center border border-border shadow-inner">
             <span className="text-text-secondary font-black text-xs opacity-20 italic">VS</span>
