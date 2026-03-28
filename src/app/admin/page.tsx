@@ -7,6 +7,7 @@ import dbConnect from "@/src/lib/db";
 import User from "@/src/models/User";
 import Match from "@/src/models/Match";
 import Prediction from "@/src/models/Prediction";
+import Team from "@/src/models/Team"; // Ensure Team model is registered for population
 import {
   Calendar,
   Trophy,
@@ -24,7 +25,12 @@ export default async function AdminDashboard() {
   }
 
   // Connect to DB to fetch real stats
-  await dbConnect();
+  try {
+    await dbConnect();
+  } catch (error) {
+    console.error("[CRITICAL] Database connection failed in Admin Dashboard:", error);
+    throw new Error("Unable to connect to the database. Please check your environment variables.");
+  }
 
   const [activeMatches, totalUsers, totalPredictions, completedMatches, rawRecentMatches] = await Promise.all([
     Match.countDocuments({ status: { $in: ['LIVE', 'UPCOMING'] } }),
