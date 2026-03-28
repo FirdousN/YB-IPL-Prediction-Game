@@ -153,9 +153,17 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
   }, [match?.status, canShowResults, matchId]);
 
   const isPredictionLocked = match?.isLocked || computedStatus !== "UPCOMING" || isLockedByTime || isCompleted;
-
-  const isTeamAWinner = match?.status === "COMPLETED" && String(match.winner) === String(match.teamA?._id);
-  const isTeamBWinner = match?.status === "COMPLETED" && String(match.winner) === String(match.teamB?._id);
+  
+  // 🏆 Fixed Winner Detection: Ensure both winner and team ID exist before comparing strings
+  const isTeamAWinner = match?.status === "COMPLETED" && 
+    !!match.winner && 
+    !!match.teamA?._id && 
+    String(match.winner) === String(match.teamA._id);
+    
+  const isTeamBWinner = match?.status === "COMPLETED" && 
+    !!match.winner && 
+    !!match.teamB?._id && 
+    String(match.winner) === String(match.teamB._id);
 
   const handleAnswerChange = (questionId: string, value: string) => {
     if (isPredictionLocked) return;
@@ -258,9 +266,9 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
         {/* Team A Vs Team B */}
         <div className="flex justify-between items-center mb-3 z-10 relative px-2 text-center">
           {/* Team A */}
-          <div className={`flex-1 text-center md:text-left p-2 rounded-[2rem] transition-all duration-500 ${isTeamBWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
+          <div className={`flex-1 text-center md:text-left p-2 rounded-[2rem] transition-all duration-500 ${isTeamAWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
             <div className="relative inline-block group-hover:scale-105 transition-transform duration-500">
-              <TeamLogo team={match.teamA} isWinner={isCompleted && (String(match.winner) === String(match.teamA?._id))} />
+              <TeamLogo team={match.teamA} isWinner={isTeamAWinner} />
               {isTeamAWinner && (
                 <div className="absolute -top-3 -right-3 bg-emerald-500 text-white p-2 rounded-full shadow-lg z-20 animate-bounce">
                   <Trophy size={16} />
@@ -299,7 +307,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
           {/* Team B */}
           <div className={`flex-1 text-center md:text-left p-2 rounded-[2rem] transition-all duration-500 ${isTeamBWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
             <div className="relative inline-block group-hover:scale-105 transition-transform duration-500">
-              <TeamLogo team={match.teamB} isWinner={isCompleted && (String(match.winner) === String(match.teamB?._id))} />
+              <TeamLogo team={match.teamB} isWinner={isTeamBWinner} />
               {isTeamBWinner && (
                 <div className="absolute -top-3 -left-3 bg-emerald-500 text-white p-2 rounded-full shadow-lg z-20 animate-bounce">
                   <Trophy size={16} />
@@ -363,13 +371,13 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
 
                 {/* 🔥 Engagement Badges */}
                 <div className="flex flex-wrap items-center justify-center gap-3">
-                  {(prediction.streak || 0) > 1 && (
+                  {(prediction?.streak || 0) > 1 && (
                     <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 px-4 py-2 rounded-2xl animate-in zoom-in duration-500">
                       <span className="text-lg">🔥</span>
-                      <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">{prediction.streak} Match Streak</span>
+                      <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">{prediction?.streak} Match Streak</span>
                     </div>
                   )}
-                  {prediction.isTopPredictor && (
+                  {prediction?.isTopPredictor && (
                     <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl animate-in zoom-in duration-700">
                       <span className="text-lg">🏆</span>
                       <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Top Predictor</span>
@@ -466,9 +474,9 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
               const isWrong = earnedPoints === 0;
               const hasPoints = !isWrong;
 
-              // 🎯 Accuracy Metrics for NEAREST ruleType
-              const userVal = currentAnswer ? Number(currentAnswer.replace(/[^0-9]/g, "")) : NaN;
-              const correctVal = officialResult ? Number(officialResult.replace(/[^0-9]/g, "")) : NaN;
+              // 🎯 Accuracy Metrics for NEAREST ruleType - Safe Number Parsing
+              const userVal = currentAnswer ? Number(currentAnswer.replace(/[^0-9.-]/g, "")) : NaN;
+              const correctVal = officialResult ? Number(officialResult.replace(/[^0-9.-]/g, "")) : NaN;
               const isValidNumbers = !isNaN(userVal) && !isNaN(correctVal) && currentAnswer !== "" && officialResult !== "";
               const diff = isValidNumbers ? Math.abs(userVal - correctVal) : null;
 
@@ -546,8 +554,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                         />
                       ) : (
                         (() => {
-                          const t = q.text.toLowerCase();
-                          const isPlayerQ = (t.includes("player") || t.includes("who") || t.includes("man of the match") || t.includes("wicket")) && !t.includes("total") && !t.includes("how many");
+                          const isPlayerQ = q.unit === "PLAYER";
 
                           if (match.players && match.players.length > 0 && isPlayerQ) {
                             return (
@@ -611,10 +618,17 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
             })}
 
             <div className="pt-3 md:pt-6 border-t border-border mt-8 text-center">
-              {isPredictionLocked ? (
-                <div className="rounded-[2rem] bg-surface-hover/50 border border-border flex flex-col items-center justify-center space-y-3">
+              {isPredictionLocked || !!prediction ? (
+                <div className="rounded-[2rem] bg-surface-hover/50 border border-border p-8 flex flex-col items-center justify-center space-y-3">
                   <CheckCircle2 className="text-success opacity-40" size={32} />
-                  <p className="text-text-primary text-xl font-black uppercase tracking-tight opacity-60">Picks Sealed</p>
+                  <p className="text-text-primary text-xl font-black uppercase tracking-tight opacity-60">
+                    {!!prediction ? "Picks Sealed" : "Arena Locked"}
+                  </p>
+                  {!!prediction && (
+                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">
+                      Your entry is submitted and awaiting match results.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -623,10 +637,10 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                     disabled={isSubmitting || !isSessionValid}
                     className="w-auto bg-accent hover:bg-accent-hover text-white font-black text-md md:text-lg py-2 md:py-3 px-4 md:px-6 rounded-[1.5rem] transition-all duration-500 shadow-xl shadow-accent/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 uppercase tracking-widest relative"
                   >
-                    {isSubmitting ? "Locking in Arena..." : answers.some(a => a.value) ? "Update My Picks" : "Confirm My Picks"}
+                    {isSubmitting ? "Locking in Arena..." : "Confirm My Picks"}
                   </button>
                   <p className="text-[9px] font-black text-text-secondary uppercase tracking-[0.4em] opacity-30 italic">
-                    You can update your entries until 1 minute before kickoff.
+                    Entries can only be submitted once per match.
                   </p>
                 </div>
               )}
