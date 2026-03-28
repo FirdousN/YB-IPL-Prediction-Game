@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PlayerSearchSelect from "@/src/components/PlayerSearchSelect";
 import ErrorModal from "@/src/components/ErrorModal";
@@ -15,7 +15,6 @@ interface Team {
 
 interface Question {
   _id: string;
-  id: string;
   text: string;
   type: string;
   options: string[];
@@ -44,8 +43,8 @@ interface Match {
   teamBScore?: { r: number; w: number; o: string };
 }
 
-export default function MatchDetailsPage({ params }: { params: Promise<{ matchId: string }> }) {
-  const resolvedParams = use(params);
+export default function MatchDetailsPage({ params }: { params: { matchId: string } }) {
+  // const resolvedParams = use(params);
   const router = useRouter();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,13 +61,13 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
   useEffect(() => {
     async function fetchMatch() {
       try {
-        const res = await fetch(`/api/matches/${resolvedParams.matchId}`);
+        const res = await fetch(`/api/matches/${params.matchId}`);
         if (!res.ok) throw new Error("Match archive not accessible or expired.");
         const data = await res.json();
         setMatch(data);
 
         // Fetch prior predictions - Middleware ensures session exists for /site paths
-        const predRes = await fetch(`/api/predictions/${resolvedParams.matchId}`);
+        const predRes = await fetch(`/api/predictions/${params.matchId}`);
         let existingAnswers: any[] = [];
         if (predRes.ok) {
           const predData = await predRes.json();
@@ -99,7 +98,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
       }
     }
     fetchMatch();
-  }, [resolvedParams.matchId]);
+  }, [params.matchId]);
 
   const isMatchToday = (isoString: string) => {
     const today = new Date();
@@ -138,7 +137,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
 
     const intervalId = setInterval(async () => {
       try {
-        const res = await fetch(`/api/predictions/${resolvedParams.matchId}`);
+        const res = await fetch(`/api/predictions/${params.matchId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.prediction) {
@@ -151,7 +150,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
     }, 5000);
 
     return () => clearInterval(intervalId);
-  }, [match?.status, canShowResults, resolvedParams.matchId]);
+  }, [match?.status, canShowResults, params.matchId]);
 
   const isPredictionLocked = match?.isLocked || computedStatus !== "UPCOMING" || isLockedByTime || isCompleted;
 
@@ -179,7 +178,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: resolvedParams.matchId, answers })
+        body: JSON.stringify({ matchId: params.matchId, answers })
       });
 
       if (!res.ok) {
@@ -256,20 +255,11 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
 
       {/* Match Context Card */}
       <div className="flex flex-col items-center justify-center bg-surface border border-border rounded-[2rem] p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500">
-      {/* <div className=" bg-surface border border-border rounded-[2rem] p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500"> */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent/[0.03] rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-1000"></div>
         <div className="flex justify-between items-center mb-10 z-10 relative px-2">
         {/* Team A */}
           <div className={`text-center flex-1 group/team ${isTeamAWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
-          {/* <div className={`flex-1 text-center md:text-right p-6 rounded-[2rem] transition-all duration-500 ${isTeamAWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}> */}
-            {/* <div className="relative inline-block group-hover:scale-105 transition-transform duration-500"> */}
-              {/* {match.teamA?.logoUrl ? (
-                <img src={match.teamA.logoUrl} alt="A" className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-white shadow-xl relative z-10 object-contain p-5 ${isTeamAWinner ? "border-emerald-500" : "border-border"}`} />
-              ) : (
-                <div className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-background shadow-xl relative z-10 flex items-center justify-center text-4xl font-black uppercase ${isTeamAWinner ? "border-emerald-500 text-emerald-500" : "border-border text-text-primary"}`}>{match.teamA?.shortName}</div>
-              )} */}
-            {/* </div> */}
-              <TeamLogo team={match.teamA} isWinner={isCompleted && (match.winner?._id === match.teamA?._id)} /> 
+              <TeamLogo team={match.teamA} isWinner={isCompleted && (String(match.winner) === String(match.teamA?._id))} /> 
               {isTeamAWinner && (
                 <div className="absolute -top-3 -right-3 bg-emerald-500 text-white p-2 rounded-full shadow-lg z-20 animate-bounce">
                   <Trophy size={16} />
@@ -307,12 +297,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
           {/* Team B */}
           <div className={`flex-1 text-center md:text-left p-6 rounded-[2rem] transition-all duration-500 ${isTeamBWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
             <div className="relative inline-block group-hover:scale-105 transition-transform duration-500">
-              {/* {match.teamB?.logoUrl ? (
-                <img src={match.teamB.logoUrl} alt="B" className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-white shadow-xl relative z-10 object-contain p-5 ${isTeamBWinner ? "border-emerald-500" : "border-border"}`} />
-              ) : (
-                <div className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-background shadow-xl relative z-10 flex items-center justify-center text-4xl font-black uppercase ${isTeamBWinner ? "border-emerald-500 text-emerald-500" : "border-border text-text-primary"}`}>{match.teamB?.shortName}</div>
-              )} */}
-              <TeamLogo team={match.teamB} isWinner={isCompleted && (match.winner?._id === match.teamB?._id || match.winner === match.teamB?._id)} />
+              <TeamLogo team={match.teamB} isWinner={isCompleted && (String(match.winner) === String(match.teamB?._id))} />
               {isTeamBWinner && (
                 <div className="absolute -top-3 -left-3 bg-emerald-500 text-white p-2 rounded-full shadow-lg z-20 animate-bounce">
                   <Trophy size={16} />
@@ -410,7 +395,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                   <span className="px-3 py-1 bg-accent/10 text-accent text-[8px] font-black rounded-full uppercase tracking-widest">Sealed</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  {prediction.answers.map((ans: any, idx: number) => {
+                  {prediction?.answers?.map((ans: any, idx: number) => {
                     const q = match.questions?.find(q => String(q._id) === String(ans.questionId));
                     return (
                       <div key={idx} className="flex justify-between items-center pb-2 border-b border-border/40 group/pick">
@@ -478,8 +463,8 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
               const hasPoints = !isWrong;
 
               // 🎯 Accuracy Metrics for NEAREST ruleType
-              const userVal = Number(currentAnswer.replace(/[^0-9]/g, ""));
-              const correctVal = Number(officialResult.replace(/[^0-9]/g, ""));
+              const userVal = currentAnswer ? Number(currentAnswer.replace(/[^0-9]/g, "")) : NaN;
+              const correctVal = officialResult ? Number(officialResult.replace(/[^0-9]/g, "")) : NaN;
               const isValidNumbers = !isNaN(userVal) && !isNaN(correctVal) && currentAnswer !== "" && officialResult !== "";
               const diff = isValidNumbers ? Math.abs(userVal - correctVal) : null;
 
@@ -663,7 +648,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
               Your strategic picks have been successfully recorded! <br />
               You can view and edit your predictions until 1 minute before kickoff.
               <br /><br />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent font-black tracking-[0.2em] italic">Evaluations begin post-match</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent tracking-[0.2em] italic">Evaluations begin post-match</span>
             </p>
             <div className="flex flex-col items-center space-y-4">
               <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
