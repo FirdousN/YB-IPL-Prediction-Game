@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import PlayerSearchSelect from "@/src/components/PlayerSearchSelect";
 import ErrorModal from "@/src/components/ErrorModal";
@@ -43,8 +43,8 @@ interface Match {
   teamBScore?: { r: number; w: number; o: string };
 }
 
-export default function MatchDetailsPage({ params }: { params: { matchId: string } }) {
-  // const resolvedParams = use(params);
+export default function MatchDetailsPage({ params }: { params: Promise<{ matchId: string }> }) {
+  const { matchId } = use(params);
   const router = useRouter();
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,13 +61,13 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
   useEffect(() => {
     async function fetchMatch() {
       try {
-        const res = await fetch(`/api/matches/${params.matchId}`);
+        const res = await fetch(`/api/matches/${matchId}`);
         if (!res.ok) throw new Error("Match archive not accessible or expired.");
         const data = await res.json();
         setMatch(data);
 
         // Fetch prior predictions - Middleware ensures session exists for /site paths
-        const predRes = await fetch(`/api/predictions/${params.matchId}`);
+        const predRes = await fetch(`/api/predictions/${matchId}`);
         let existingAnswers: any[] = [];
         if (predRes.ok) {
           const predData = await predRes.json();
@@ -98,7 +98,7 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
       }
     }
     fetchMatch();
-  }, [params.matchId]);
+  }, [matchId]);
 
   const isMatchToday = (isoString: string) => {
     const today = new Date();
@@ -137,7 +137,7 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
 
     const intervalId = setInterval(async () => {
       try {
-        const res = await fetch(`/api/predictions/${params.matchId}`);
+        const res = await fetch(`/api/predictions/${matchId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.prediction) {
@@ -150,7 +150,7 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
     }, 5000);
 
     return () => clearInterval(intervalId);
-  }, [match?.status, canShowResults, params.matchId]);
+  }, [match?.status, canShowResults, matchId]);
 
   const isPredictionLocked = match?.isLocked || computedStatus !== "UPCOMING" || isLockedByTime || isCompleted;
 
@@ -178,7 +178,7 @@ export default function MatchDetailsPage({ params }: { params: { matchId: string
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId: params.matchId, answers })
+        body: JSON.stringify({ matchId, answers })
       });
 
       if (!res.ok) {
