@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/src/lib/jwt';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
     const isApiRequest = path.startsWith('/api');
 
@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
     const isProtectedUser = path.startsWith('/site') || path.startsWith('/api/predictions');
 
     // Check for session
-    const cookie = request.cookies.get('session')?.value;
+    const cookie = request.cookies.get('token')?.value;
     const session = cookie ? await verifyToken(cookie) : null;
 
     // 1. Admin Route Protection

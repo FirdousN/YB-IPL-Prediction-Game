@@ -6,7 +6,7 @@ import { verifyToken, JWTPayload } from './jwt';
  */
 export async function setSessionCookie(token: string) {
     const cookieStore = await cookies();
-    cookieStore.set('session', token, {
+    cookieStore.set('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -25,10 +25,10 @@ export async function getSession(request?: NextRequest): Promise<JWTPayload | nu
     try {
         let token;
         if (request) {
-            token = request.cookies.get('session')?.value;
+            token = request.cookies.get('token')?.value;
         } else {
             const cookieStore = await cookies();
-            token = cookieStore.get('session')?.value;
+            token = cookieStore.get('token')?.value;
         }
         
         if (!token) return null;
@@ -44,5 +44,5 @@ export async function getSession(request?: NextRequest): Promise<JWTPayload | nu
  */
 export async function clearSession() {
     const cookieStore = await cookies();
-    cookieStore.delete('session');
+    cookieStore.delete('token');
 }

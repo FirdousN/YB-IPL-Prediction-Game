@@ -186,7 +186,7 @@ export default function MatchCard({ match, prediction }: MatchProps) {
       <div className="flex justify-between items-center mb-10 z-10 relative px-2">
         {/* Team A */}
         <div className="text-center flex-1 group/team">
-          <TeamLogo team={match.teamA} isWinner={isCompleted && !!match.winner?._id && !!match.teamA?._id && (match.winner._id === match.teamA._id)} />
+          <TeamLogo team={match.teamA} isWinner={isCompleted && !!match.winner && !!match.teamA?._id && (String(match.winner) === String(match.teamA._id))} />
           <h3 className="font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors">{match.teamA?.name || "TBD"}</h3>
           {isCompleted && (
             <p className="text-xs font-black text-text-secondary mt-1">
@@ -205,7 +205,7 @@ export default function MatchCard({ match, prediction }: MatchProps) {
 
         {/* Team B */}
         <div className="text-center flex-1 group/team">
-          <TeamLogo team={match.teamB} isWinner={isCompleted && !!match.winner?._id && !!match.teamB?._id && (match.winner._id === match.teamB._id)} />
+          <TeamLogo team={match.teamB} isWinner={isCompleted && !!match.winner && !!match.teamB?._id && (String(match.winner) === String(match.teamB._id))} />
           <h3 className="font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors">{match.teamB?.name || "TBD"}</h3>
           {isCompleted && (
             <p className="text-xs font-black text-text-secondary mt-1">
