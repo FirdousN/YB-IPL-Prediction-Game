@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/src/lib/jwt';
 
-export async function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
     const isApiRequest = path.startsWith('/api');
 
@@ -69,7 +69,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
     matcher: [
         '/admin/:path*',
-        '/site/:path*',
         '/site/:path*',
         '/api/admin/:path*',
         '/api/predictions/:path*',

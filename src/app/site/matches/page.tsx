@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import MatchFilterSort from "@/src/components/matches/MatchFilterSort";
 import UpcomingSection from "@/src/components/matches/UpcomingSection";
-import LiveSection from "@/src/components/matches/LiveSection";
+// import LiveSection from "@/src/components/matches/LiveSection";
 import CompletedSection from "@/src/components/matches/CompletedSection";
 import MyPredictionsSection from "@/src/components/matches/MyPredictionsSection";
 import AllMatchesSection from "@/src/components/matches/AllMatchesSection";
@@ -130,9 +130,9 @@ export default function MatchesPage() {
     // 2. Global Search
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(m => 
-        m.teamA.name.toLowerCase().includes(q) || 
-        m.teamB.name.toLowerCase().includes(q) || 
+      filtered = filtered.filter(m =>
+        m.teamA.name.toLowerCase().includes(q) ||
+        m.teamB.name.toLowerCase().includes(q) ||
         m.venue?.toLowerCase().includes(q)
       );
     }
@@ -187,7 +187,7 @@ export default function MatchesPage() {
       </div>
 
       {/* Filter & Sort Bar */}
-      <MatchFilterSort 
+      <MatchFilterSort
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         sortBy={sortBy}
