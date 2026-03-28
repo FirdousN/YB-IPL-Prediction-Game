@@ -41,12 +41,12 @@ export default function PlayerSearchSelect({
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          w-full bg-surface-hover border-2 rounded-[1.25rem] px-6 py-5 flex items-center justify-between cursor-pointer transition-all duration-300
+          w-full bg-surface-hover border-2 rounded-[1.25rem] px-3 md:px-6 py-3 md:py-5 flex items-center justify-between cursor-pointer transition-all duration-300
           ${isOpen ? "border-accent ring-8 ring-accent/5" : "border-border hover:border-accent/40"}
           ${disabled ? "opacity-30 cursor-not-allowed" : "shadow-sm hover:shadow-md"}
         `}
       >
-        <span className={`text-lg transition-colors ${value ? "text-text-primary font-black" : "text-text-secondary opacity-60"}`}>
+        <span className={`text-sm md:text-md lg:text-lg transition-colors ${value ? "text-text-primary font-black" : "text-text-secondary"}`}>
           {value || placeholder}
         </span>
         <ChevronDown className={`text-text-secondary transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} size={20} />
@@ -62,7 +62,7 @@ export default function PlayerSearchSelect({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search squad..."
-              className="bg-transparent border-none focus:ring-0 text-text-primary w-full placeholder:text-text-secondary opacity-60 font-black text-sm uppercase tracking-wider"
+              className="bg-transparent border-none focus:ring-0 text-text-primary w-full placeholder:text-text-secondary font-black text-sm uppercase tracking-wider"
               onClick={(e) => e.stopPropagation()}
             />
             {search && (
@@ -94,7 +94,7 @@ export default function PlayerSearchSelect({
                 </div>
               ))
             ) : (
-              <div className="px-5 py-12 text-center text-text-secondary font-bold opacity-40 text-xs uppercase tracking-widest italic">
+              <div className="px-5 py-12 text-center text-text-secondary font-bold text-xs uppercase tracking-widest italic">
                 No match found for "{search}"
               </div>
             )}

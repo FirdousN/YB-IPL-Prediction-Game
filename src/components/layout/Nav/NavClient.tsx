@@ -70,10 +70,10 @@ export default function NavClient() {
                         </Link>
 
                         <div className="hidden lg:flex items-center space-x-8 text-[10px] font-black tracking-[0.2em] text-text-primary uppercase">
-                            <Link href="/site/fixtures" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">Fixtures & Results</Link>
-                            <Link href="/site/points-table" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">Points Table</Link>
-                            <Link href="/site/stats" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">Overall Stats</Link>
-                            <Link href="/site/teams" className="opacity-70 hover:opacity-100 hover:text-accent transition-all">All Teams</Link>
+                            <Link href="/site/fixtures" className="hover:text-accent transition-all">Fixtures & Results</Link>
+                            <Link href="/site/points-table" className="hover:text-accent transition-all">Points Table</Link>
+                            <Link href="/site/stats" className="hover:text-accent transition-all">Overall Stats</Link>
+                            <Link href="/site/teams" className="hover:text-accent transition-all">All Teams</Link>
                         </div>
                     </div>
 

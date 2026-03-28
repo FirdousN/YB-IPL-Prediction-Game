@@ -41,7 +41,7 @@ export default function MatchFilterSort({
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary opacity-70" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
           <input
             type="text"
             placeholder="Search teams, venue..."
@@ -55,7 +55,7 @@ export default function MatchFilterSort({
         <div className="flex flex-wrap gap-3">
           {/* Team Filter */}
           <div className="relative min-w-[140px]">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary opacity-70 shrink-0" size={14} />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary shrink-0" size={14} />
             <select
               value={filterTeam}
               onChange={(e) => setFilterTeam(e.target.value)}
@@ -68,7 +68,7 @@ export default function MatchFilterSort({
 
           {/* Tournament Filter */}
           <div className="relative min-w-[140px]">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary opacity-70 shrink-0" size={14} />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary shrink-0" size={14} />
             <select
               value={filterTournament}
               onChange={(e) => setFilterTournament(e.target.value)}
@@ -81,7 +81,7 @@ export default function MatchFilterSort({
 
           {/* Sort */}
           <div className="relative min-w-[140px]">
-            <SortDesc className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary opacity-70 shrink-0" size={14} />
+            <SortDesc className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary shrink-0" size={14} />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}

@@ -251,10 +251,10 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 pb-20 pt-8 px-4 transition-colors duration-500">
+    <div className="max-w-5xl mx-auto space-y-10 pb-18 pt-6 px-2 transition-colors duration-500">
 
       {/* Match Context Card */}
-      <div className="flex flex-col items-center justify-center bg-surface border border-border rounded-[2rem] p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500">
+      <div className="flex flex-col items-center justify-center bg-surface border border-border rounded-[2rem] p-6 md:p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500">
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent/[0.03] rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-1000"></div>
         <div className="flex justify-between items-center mb-10 z-10 relative px-2">
         {/* Team A */}
@@ -315,11 +315,11 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
         </div>
         {/* Match Date and Venue */}
         <div className="flex flex-col items-center">
-              <div className="space-y-1 opacity-80">
+              <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">
                   {new Date(match.startTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
-                <p className="text-[9px] font-bold uppercase tracking-tight text-text-secondary max-w-[120px]">{match.venue || 'Stadium'}</p>
+                <p className="text-[9px] font-bold uppercase tracking-tight text-text-secondary opacity-60 max-w-[120px]">{match.venue || 'Stadium'}</p>
               </div>
               {/* Match Result */}
               {match.status === "COMPLETED" && match.result && (
@@ -331,7 +331,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
       </div>
 
       {/* Prediction Action Hub */}
-      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[2.5rem] p-8 md:p-14 shadow-sm space-y-12 relative overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-[2.5rem] p-6 md:p-8 md:p-14 shadow-sm space-y-12 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-accent to-accent/40"></div>
 
         {/* Predict & Conquer Header */}
@@ -389,9 +389,9 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
 
             {/* Prediction Summary for Locked Matches */}
             {isPredictionLocked && prediction && (
-              <div className="max-w-2xl mx-auto bg-surface-hover/60 border border-border/50 rounded-[2rem] p-8 text-left animate-in fade-in slide-in-from-top-4 duration-700">
+              <div className="max-w-2xl mx-auto bg-surface-hover/60 border border-border/50 rounded-[2rem] p-6 md:p-8 text-left animate-in fade-in slide-in-from-top-4 duration-700">
                 <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] opacity-60 italic">Your Locked Picks</h4>
+                  <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] italic">Your Locked Picks</h4>
                   <span className="px-3 py-1 bg-accent/10 text-accent text-[8px] font-black rounded-full uppercase tracking-widest">Sealed</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
@@ -399,7 +399,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                     const q = match.questions?.find(q => String(q._id) === String(ans.questionId));
                     return (
                       <div key={idx} className="flex justify-between items-center pb-2 border-b border-border/40 group/pick">
-                        <span className="text-[10px] font-bold text-text-secondary uppercase opacity-70 group-hover/pick:opacity-100 transition-opacity">{q?.text || `Q${idx + 1}`}</span>
+                        <span className="text-[10px] font-bold text-text-secondary uppercase group-hover/pick:text-text-primary transition-colors">{q?.text || `Q${idx + 1}`}</span>
                         <span className="text-[11px] font-black text-text-primary uppercase">{ans.value}</span>
                       </div>
                     );
@@ -488,7 +488,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
               : "border-rose-500/10";
 
               return (
-                <div key={q._id} className={`space-y-6 group/item p-6 md:p-8 rounded-[2rem] transition-all duration-500 ${isResolved ? `${bgColor} border ${borderColor} shadow-sm` : ""}`}>
+                <div key={q._id} className={`space-y-3 group/item p-3 md:p-6 rounded-[2rem] transition-all duration-500 ${isResolved ? `${bgColor} border ${borderColor} shadow-sm` : ""}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-5">
                       <span className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm border 
@@ -502,11 +502,11 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                           {q.text}
                         </h3>
                         <div className="flex items-center gap-3">
-                           <p className="text-[10px] font-black text-accent opacity-60">
+                           <p className="text-[10px] font-black text-accent">
                             {typeof q.points === "number" ? q.points : 20} pts
                           </p>
                           {q.ruleType === "NEAREST" && (
-                            <p className="text-[10px] font-bold text-accent/40 uppercase tracking-tight">
+                            <p className="text-[10px] font-bold text-accent uppercase tracking-tight">
                               Closer → more points (Max diff: {q.maxRange ?? 30})
                             </p>
                           )}
@@ -524,7 +524,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                               : "Missed"}                        </div>
                         <p className={`text-xl font-black ${statusColor} tracking-tighter`}>
                           {earnedPoints}/{maxPoints}
-                          <span className="text-[10px] opacity-40 ml-1 uppercase">Pts</span>
+                          <span className="text-[10px] ml-1 uppercase">Pts</span>
                         </p>
                       </div>
                     )}
@@ -578,7 +578,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                             <Trophy size={16} className={hasPoints ? "text-emerald-500" : "text-rose-500"} />
                           </div>
                           <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 leading-none mb-1">Official Result</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest leading-none mb-1">Official Result</p>
                             <p className={`font-black uppercase tracking-tight ${hasPoints ? "text-emerald-600" : "text-rose-600"}`}>
                               {officialResult}
                             </p>
@@ -594,7 +594,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                                   ? `Off by ${diff} ${q.unit?.toLowerCase() || 'runs'}` 
                                   : `Missed by ${diff} ${q.unit?.toLowerCase() || 'runs'}`}
                             </p>
-                            <div className="text-[9px] font-bold text-text-secondary opacity-30 italic">
+                            <div className="text-[9px] font-bold text-text-secondary italic">
                               Points = {q.points ?? 0} - |Predicted - Actual|
                             </div>
                           </div>
@@ -608,7 +608,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
 
             <div className="pt-10 border-t border-border mt-16 text-center">
               {isPredictionLocked ? (
-                <div className="p-8 rounded-[2rem] bg-surface-hover/50 border border-border flex flex-col items-center justify-center space-y-3">
+                <div className="rounded-[2rem] bg-surface-hover/50 border border-border flex flex-col items-center justify-center space-y-3">
                   <CheckCircle2 className="text-success opacity-40" size={32} />
                   <p className="text-text-primary text-xl font-black uppercase tracking-tight opacity-60">Picks Sealed</p>
                 </div>
