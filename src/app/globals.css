@@ -2,28 +2,28 @@
 
 :root {
   --background: #f1f5f9; /* Slate 100 - Better base for light mode */
-  --foreground: #020617; /* Slate 950 - Stronger black */
+  --foreground: #000000; /* Pure black for maximum contrast */
   --surface: #ffffff;
   --surface-hover: #e2e8f0;
   --border: #cbd5e1; /* Slate 300 - Much more visible than Slate 200 */
-  --text-primary: #020617;
-  --text-secondary: #334155; /* Slate 700 - High contrast secondary text */
+  --text-primary: #000000;
+  --text-secondary: #1e293b; /* Slate 800 - Very dark for readability */
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
   --card-bg: #ffffff;
-  --sidebar-bg: #020617;
+  --sidebar-bg: #000000;
   --success: #10b981;
   --error: #ef4444;
 }
 
 .dark {
   --background: #0a0f1e; /* Midnight Indigo - Milder than pitch black */
-  --foreground: #f1f5f9; /* Slate 100 */
+  --foreground: #ffffff; /* Pure white */
   --surface: #131b2e; /* Deep Navy Surface */
   --surface-hover: #1e293b;
   --border: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-primary: #ffffff;
+  --text-secondary: #f8fafc; /* Near white for secondary */
   --accent: #3b82f6;
   --accent-hover: #60a5fa;
   --card-bg: #131b2e;

@@ -153,7 +153,7 @@ export default function MatchCard({ match, prediction }: MatchProps) {
       </div>
     ) : (
       <div className={`w-20 h-20 mx-auto bg-surface-hover rounded-[1.5rem] flex items-center justify-center mb-3 shadow-inner border ${isWinner ? 'border-emerald-500 border-2' : 'border-border'}`}>
-        <span className="text-xl font-black text-text-primary opacity-40 uppercase tracking-tighter">{team.shortName}</span>
+        <span className="text-xl font-black text-text-primary uppercase tracking-tighter">{team.shortName}</span>
       </div>
     );
   };
@@ -165,8 +165,8 @@ export default function MatchCard({ match, prediction }: MatchProps) {
       {/* Header: Match Info */}
       <div className="flex justify-between items-start mb-10 z-10 relative">
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary opacity-40 leading-none">{match.matchNumber || "League Match"} • {match.group || "T20"}</p>
-          <p className="text-[9px] font-bold text-text-secondary opacity-30 uppercase tracking-tight italic">{match.venue || "Stadium"}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary leading-none">{match.matchNumber || "League Match"} • {match.group || "T20"}</p>
+          <p className="text-[9px] font-bold text-text-secondary opacity-60 uppercase tracking-tight italic">{match.venue || "Stadium"}</p>
         </div>
 
         {/* Live/Status Badge */}
@@ -176,10 +176,8 @@ export default function MatchCard({ match, prediction }: MatchProps) {
           </span>
         ) : (
           <div className="flex flex-col items-end gap-1">
-            <span className="px-4 py-1.5 bg-accent/5 text-accent text-[9px] font-black rounded-xl border border-accent/10 tracking-[0.15em] uppercase shadow-sm">
-              {new Date(match.startTime).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-            </span>
-            <span className="text-[9px] font-black text-text-secondary opacity-30 uppercase tracking-widest">{new Date(match.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="text-[9px] font-black text-text-secondary uppercase tracking-widest">{new Date(match.startTime).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+            <span className="text-[9px] font-black text-text-secondary uppercase tracking-widest">{new Date(match.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
         )}
       </div>
@@ -191,9 +189,9 @@ export default function MatchCard({ match, prediction }: MatchProps) {
           <TeamLogo team={match.teamA} isWinner={isCompleted && (match.winner?._id === match.teamA?._id)} />
           <h3 className="font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors">{match.teamA?.name || "TBD"}</h3>
           {isCompleted && (
-            <p className="text-xs font-black text-text-secondary mt-1 opacity-60">
+            <p className="text-xs font-black text-text-secondary mt-1">
               {match.teamAScore?.r}/{match.teamAScore?.w}
-              <span className="text-[10px] opacity-40">({match.teamAScore?.o})</span>
+              <span className="text-[10px]">({match.teamAScore?.o})</span>
             </p>
           )}
         </div>
@@ -201,7 +199,7 @@ export default function MatchCard({ match, prediction }: MatchProps) {
         {/* VS */}
         <div className="px-4 text-center shrink-0">
           <div className="w-10 h-10 bg-background/50 rounded-full flex items-center justify-center border border-border shadow-inner">
-            <span className="text-text-secondary font-black text-xs opacity-20 italic">VS</span>
+            <span className="text-text-secondary font-black text-xs italic">VS</span>
           </div>
         </div>
 
@@ -210,8 +208,8 @@ export default function MatchCard({ match, prediction }: MatchProps) {
           <TeamLogo team={match.teamB} isWinner={isCompleted && (match.winner?._id === match.teamB?._id || match.winner === match.teamB?._id)} />
           <h3 className="font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors">{match.teamB?.name || "TBD"}</h3>
           {isCompleted && (
-            <p className="text-xs font-black text-text-secondary mt-1 opacity-60">
-              {match.teamBScore?.r}/{match.teamBScore?.w} <span className="text-[10px] opacity-40">({match.teamBScore?.o})</span>
+            <p className="text-xs font-black text-text-secondary mt-1">
+              {match.teamBScore?.r}/{match.teamBScore?.w} <span className="text-[10px]">({match.teamBScore?.o})</span>
             </p>
           )}
         </div>
@@ -228,7 +226,7 @@ export default function MatchCard({ match, prediction }: MatchProps) {
       <div className="z-10 relative space-y-6">
         {timeLeft && isUpcoming && !match.isLocked ? (
           <div className="text-center py-5 bg-surface-hover/50 rounded-[1.5rem] border border-border/50 group-hover:bg-surface-hover transition-colors duration-500">
-            <p className="text-text-secondary text-[9px] uppercase font-black tracking-[0.3em] mb-2 opacity-30 italic">Arena Locks In</p>
+            <p className="text-text-secondary text-[9px] uppercase font-black tracking-[0.3em] mb-2 italic">Arena Locks In</p>
             <div className="text-2xl font-black text-text-primary tracking-[0.1em] font-mono">
               {(timeLeft as any).days ? (
                 <span className="flex items-center justify-center gap-2">

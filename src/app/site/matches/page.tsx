@@ -177,7 +177,7 @@ export default function MatchesPage() {
               flex-1 py-3 px-6 rounded-xl text-[10px] font-black transition-all duration-300 uppercase tracking-[0.15em] min-w-max flex items-center justify-center
               ${activeTab === tab
                 ? "bg-accent text-white shadow-lg shadow-accent/20 scale-105"
-                : "text-text-secondary hover:text-text-primary hover:bg-surface-hover/50"}
+                : "text-text-primary hover:text-accent hover:bg-surface-hover/50"}
             `}
           >
             {tab === "MY_PREDICTIONS" ? "MY PREDICTIONS" : tab}

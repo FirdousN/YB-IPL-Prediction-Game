@@ -46,7 +46,7 @@ export default function ThemeToggle() {
       </div>
 
       {/* Decorative Icons on track */}
-      <div className="absolute inset-0 flex justify-between items-center px-1.5 opacity-20 pointer-events-none">
+      <div className="absolute inset-0 flex justify-between items-center px-1.5 focus:pointer-events-none">
         <Sun size={10} className={`${theme === 'light' ? 'text-amber-500' : 'text-text-secondary'}`} />
         <Moon size={10} className={`${theme === 'dark' ? 'text-accent' : 'text-text-secondary'}`} />
       </div>
