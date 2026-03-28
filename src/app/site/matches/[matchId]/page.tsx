@@ -492,7 +492,7 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                   : "border-rose-500/10";
 
               return (
-                <div key={q._id} className={`space-y-3 group/item p-3 md:p-6 rounded-[2rem] transition-all duration-500 ${isResolved ? `${bgColor} border ${borderColor} shadow-sm` : ""}`}>
+                <div key={q._id} className={`space-y-2 group/item p-3 md:p-6 rounded-[2rem] transition-all duration-500 ${isResolved ? `${bgColor} border ${borderColor} shadow-sm` : ""}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-5">
                       <span className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm border 
@@ -617,11 +617,11 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                   <p className="text-text-primary text-xl font-black uppercase tracking-tight opacity-60">Picks Sealed</p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-3">
                   <button
                     type="submit"
                     disabled={isSubmitting || !isSessionValid}
-                    className="w-full bg-accent hover:bg-accent-hover text-white font-black text-lg py-5 rounded-[1.5rem] transition-all duration-500 shadow-xl shadow-accent/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 uppercase tracking-widest relative"
+                    className="w-auto bg-accent hover:bg-accent-hover text-white font-black text-md md:text-lg py-2 md:py-3 px-4 md:px-6 rounded-[1.5rem] transition-all duration-500 shadow-xl shadow-accent/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 uppercase tracking-widest relative"
                   >
                     {isSubmitting ? "Locking in Arena..." : answers.some(a => a.value) ? "Update My Picks" : "Confirm My Picks"}
                   </button>
