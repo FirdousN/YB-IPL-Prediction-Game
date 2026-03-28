@@ -228,28 +228,55 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
 
   if (!match) return null;
 
+  const TeamLogo = ({ team, isWinner }: { team?: Team; isWinner?: boolean }) => {
+    if (!team) return <div className="w-20 h-20 mx-auto bg-surface-hover rounded-[1.5rem] mb-3 border border-border"></div>;
+    return team.logoUrl ? (
+      <div className="relative group/logo">
+        <div className={`absolute inset-0 ${isWinner ? 'bg-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]' : 'bg-accent/5'} rounded-full blur-xl scale-75 group-hover/logo:scale-110 transition duration-500`}></div>
+        <img
+          src={team.logoUrl}
+          alt={team.shortName}
+          className={`w-20 h-20 mx-auto bg-white rounded-[1.5rem] mb-3 shadow-sm border ${isWinner ? 'border-emerald-500 border-2' : 'border-border'} relative z-10 object-contain p-4 group-hover/logo:scale-110 transition duration-500`}
+        />
+        {isWinner && (
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-emerald-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap tracking-widest uppercase">
+            WINNER
+          </div>
+        )}
+      </div>
+    ) : (
+      <div className={`w-20 h-20 mx-auto bg-surface-hover rounded-[1.5rem] flex items-center justify-center mb-3 shadow-inner border ${isWinner ? 'border-emerald-500 border-2' : 'border-border'}`}>
+        <span className="text-xl font-black text-text-primary opacity-40 uppercase tracking-tighter">{team.shortName}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-20 pt-8 px-4 transition-colors duration-500">
 
       {/* Match Context Card */}
-      <div className="bg-surface rounded-[2.5rem] p-10 lg:p-14 border border-border shadow-sm relative overflow-hidden text-center group">
+      <div className="flex flex-col items-center justify-center bg-surface border border-border rounded-[2rem] p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500">
+      {/* <div className=" bg-surface border border-border rounded-[2rem] p-8 shadow-sm relative overflow-hidden group hover:border-accent hover:shadow-xl hover:shadow-accent/5 transition-all duration-500"> */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-accent/[0.03] rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-1000"></div>
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
-          <div className={`flex-1 text-center md:text-right p-6 rounded-[2rem] transition-all duration-500 ${isTeamAWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
-            <div className="relative inline-block group-hover:scale-105 transition-transform duration-500">
-              {match.teamA?.logoUrl ? (
+        <div className="flex justify-between items-center mb-10 z-10 relative px-2">
+        {/* Team A */}
+          <div className={`text-center flex-1 group/team ${isTeamAWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
+          {/* <div className={`flex-1 text-center md:text-right p-6 rounded-[2rem] transition-all duration-500 ${isTeamAWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}> */}
+            {/* <div className="relative inline-block group-hover:scale-105 transition-transform duration-500"> */}
+              {/* {match.teamA?.logoUrl ? (
                 <img src={match.teamA.logoUrl} alt="A" className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-white shadow-xl relative z-10 object-contain p-5 ${isTeamAWinner ? "border-emerald-500" : "border-border"}`} />
               ) : (
                 <div className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-background shadow-xl relative z-10 flex items-center justify-center text-4xl font-black uppercase ${isTeamAWinner ? "border-emerald-500 text-emerald-500" : "border-border text-text-primary"}`}>{match.teamA?.shortName}</div>
-              )}
+              )} */}
+            {/* </div> */}
+              <TeamLogo team={match.teamA} isWinner={isCompleted && (match.winner?._id === match.teamA?._id)} /> 
               {isTeamAWinner && (
                 <div className="absolute -top-3 -right-3 bg-emerald-500 text-white p-2 rounded-full shadow-lg z-20 animate-bounce">
                   <Trophy size={16} />
                 </div>
               )}
-            </div>
-            <h2 className={`text-2xl font-black mt-6 tracking-tighter uppercase leading-tight ${isTeamAWinner ? "text-emerald-500" : "text-text-primary"}`}>{match.teamA?.name}</h2>
+             {/* Team A Name  */}
+            <h3 className={`font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors ${isTeamAWinner ? "text-emerald-500" : "text-text-primary"}`}>{match.teamA?.name}</h3>
             {match.status === "COMPLETED" && match.teamAScore && (
               <p className="text-xl font-black text-text-secondary mt-2 tabular-nums">
                 {match.teamAScore.r}/{match.teamAScore.w}
@@ -258,9 +285,11 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
             )}
           </div>
 
+          {/* VS */}
           <div className="px-4 shrink-0 flex flex-col items-center">
-            <div className="bg-surface border border-border rounded-3xl p-6 shadow-sm mb-6 relative group/vs transition-colors">
-              <span className="text-4xl font-black text-text-secondary opacity-40 italic tracking-tighter">VS</span>
+           {/* Match status */}
+            <div className="bg-surface border border-border rounded-xl p-3 md:p-6 shadow-sm mb-3 md:mb-6 relative group/vs transition-colors">
+              <span className="text-2xl md:text-4xl font-black text-text-secondary opacity-40 italic tracking-tighter">VS</span>
               {computedStatus === "LIVE" && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-[8px] font-black px-3 py-1 rounded-full animate-pulse uppercase tracking-[0.2em]">
                   Live
@@ -272,33 +301,25 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
                 </div>
               )}
             </div>
-            <div className="space-y-1 opacity-80">
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">
-                {new Date(match.startTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-tight text-text-secondary max-w-[120px] truncate">{match.venue || 'Stadium'}</p>
-            </div>
-            {match.status === "COMPLETED" && match.result && (
-              <div className="mt-4 px-4 py-2 bg-accent/5 border border-accent/10 rounded-xl">
-                <p className="text-[10px] font-black text-accent uppercase tracking-tight leading-tight">{match.result}</p>
-              </div>
-            )}
+            
           </div>
 
+          {/* Team B */}
           <div className={`flex-1 text-center md:text-left p-6 rounded-[2rem] transition-all duration-500 ${isTeamBWinner ? "bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5" : ""}`}>
             <div className="relative inline-block group-hover:scale-105 transition-transform duration-500">
-              {match.teamB?.logoUrl ? (
+              {/* {match.teamB?.logoUrl ? (
                 <img src={match.teamB.logoUrl} alt="B" className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-white shadow-xl relative z-10 object-contain p-5 ${isTeamBWinner ? "border-emerald-500" : "border-border"}`} />
               ) : (
                 <div className={`w-32 h-32 md:w-36 md:h-36 rounded-3xl border bg-background shadow-xl relative z-10 flex items-center justify-center text-4xl font-black uppercase ${isTeamBWinner ? "border-emerald-500 text-emerald-500" : "border-border text-text-primary"}`}>{match.teamB?.shortName}</div>
-              )}
+              )} */}
+              <TeamLogo team={match.teamB} isWinner={isCompleted && (match.winner?._id === match.teamB?._id || match.winner === match.teamB?._id)} />
               {isTeamBWinner && (
                 <div className="absolute -top-3 -left-3 bg-emerald-500 text-white p-2 rounded-full shadow-lg z-20 animate-bounce">
                   <Trophy size={16} />
                 </div>
               )}
             </div>
-            <h2 className={`text-2xl font-black mt-6 tracking-tighter uppercase leading-tight ${isTeamBWinner ? "text-emerald-500" : "text-text-primary"}`}>{match.teamB?.name}</h2>
+            <h3 className={`font-black text-sm text-text-primary leading-tight uppercase tracking-tighter group-hover/team:text-accent transition-colors ${isTeamBWinner ? "text-emerald-500" : "text-text-primary"}`}>{match.teamB?.name}</h3>
             {match.status === "COMPLETED" && match.teamBScore && (
               <p className="text-xl font-black text-text-secondary mt-2 tabular-nums">
                 {match.teamBScore.r}/{match.teamBScore.w}
@@ -306,6 +327,21 @@ export default function MatchDetailsPage({ params }: { params: Promise<{ matchId
               </p>
             )}
           </div>
+        </div>
+        {/* Match Date and Venue */}
+        <div className="flex flex-col items-center">
+              <div className="space-y-1 opacity-80">
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">
+                  {new Date(match.startTime).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-tight text-text-secondary max-w-[120px]">{match.venue || 'Stadium'}</p>
+              </div>
+              {/* Match Result */}
+              {match.status === "COMPLETED" && match.result && (
+                <div className="mt-4 px-4 py-2 bg-accent/5 border border-accent/10 rounded-xl">
+                  <p className="text-[10px] font-black text-accent uppercase tracking-tight leading-tight">{match.result}</p>
+                </div>
+              )}
         </div>
       </div>
 
