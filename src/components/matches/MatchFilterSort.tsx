@@ -41,7 +41,7 @@ export default function MatchFilterSort({
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-primary" size={18} />
           <input
             type="text"
             placeholder="Search teams, venue..."

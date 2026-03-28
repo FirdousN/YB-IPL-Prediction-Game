@@ -41,7 +41,7 @@ export default function PlayerSearchSelect({
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          w-full bg-surface-hover border-2 rounded-[1.25rem] px-3 md:px-6 py-3 md:py-5 flex items-center justify-between cursor-pointer transition-all duration-300
+          w-full bg-surface-hover border-2 rounded-[1.25rem] px-3 md:px-6 py-3 md:py-6 flex items-center justify-between cursor-pointer transition-all duration-300
           ${isOpen ? "border-accent ring-8 ring-accent/5" : "border-border hover:border-accent/40"}
           ${disabled ? "opacity-30 cursor-not-allowed" : "shadow-sm hover:shadow-md"}
         `}
@@ -85,11 +85,11 @@ export default function PlayerSearchSelect({
                     setSearch("");
                   }}
                   className={`
-                    flex items-center justify-between px-5 py-4 rounded-xl cursor-pointer transition-all duration-200
+                    flex items-center justify-between px-2 md:px-4 py-2 md:py-4 rounded-xl cursor-pointer transition-all duration-200
                     ${value === player ? "bg-accent/10 text-accent font-black shadow-inner" : "text-text-primary hover:bg-surface-hover hover:translate-x-1"}
                   `}
                 >
-                  <span className="text-sm font-bold uppercase tracking-tight">{player}</span>
+                  <span className="text-sm font-semibold uppercase tracking-tight">{player}</span>
                   {value === player && <div className="w-5 h-5 bg-accent rounded-full flex items-center justify-center shadow-lg shadow-accent/20"><Check size={12} className="text-white" /></div>}
                 </div>
               ))
